@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/UniversalConverter.Domain/UniversalConverter.Domain.csproj" />
+    <Project Path="src/UniversalConverter.Contracts/UniversalConverter.Contracts.csproj" />
+    <Project Path="src/UniversalConverter.Application/UniversalConverter.Application.csproj" />
+    <Project Path="src/UniversalConverter.Infrastructure/UniversalConverter.Infrastructure.csproj" />
+    <Project Path="src/UniversalConverter.Desktop/UniversalConverter.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/UniversalConverter.Core.Tests/UniversalConverter.Core.Tests.csproj" />
+    <Project Path="tests/UniversalConverter.Infrastructure.Tests/UniversalConverter.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

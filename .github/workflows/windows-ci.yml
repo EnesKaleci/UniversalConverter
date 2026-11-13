@@ -1,0 +1,88 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore UniversalConverter.slnx
+      - name: Build
+        run: dotnet build UniversalConverter.slnx -c Release --no-restore
+      - name: Test
+        run: dotnet test UniversalConverter.slnx -c Release --no-build --logger trx --results-directory artifacts/test-results
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-xUnit-results
+          path: artifacts/test-results/*.trx
+          if-no-files-found: ignore
+
+  portable:
+    name: Windows x64 · ${{ matrix.layout }}
+    needs: test
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - layout: multi-file
+            single_file: 'false'
+            artifact: UniversalConverter-M0.1-Windows-x64
+          - layout: single-file
+            single_file: 'true'
+            artifact: UniversalConverter-M0.1-Windows-x64-SingleFile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish Windows x64 self-contained
+        run: >
+          dotnet publish src/UniversalConverter.Desktop -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=${{ matrix.single_file }}
+          -p:IncludeNativeLibrariesForSelfExtract=${{ matrix.single_file }}
+          -p:PublishTrimmed=false -o artifacts/publish
+      - name: Package, verify and test extracted ZIP
+        shell: pwsh
+        env:
+          ARTIFACT_NAME: ${{ matrix.artifact }}
+          PACKAGE_LAYOUT: ${{ matrix.layout }}
+          PACKAGE_TEST_ROOT: ${{ runner.temp }}/UniversalConverter-M0.1
+        run: ./.github/scripts/Test-WindowsPortable.ps1
+      - name: Upload Windows portable ZIP and SHA-256
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            artifacts/${{ matrix.artifact }}.zip
+            artifacts/${{ matrix.artifact }}.zip.sha256
+          if-no-files-found: error
+      - name: Upload smoke-test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-startup-logs-${{ matrix.layout }}
+          path: ${{ runner.temp }}/UniversalConverter-M0.1/*-data/logs/startup-*.log
+          if-no-files-found: ignore

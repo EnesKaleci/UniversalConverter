@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/UniversalConverter.Application/UniversalConverter.Application.csproj" />
+    <ProjectReference Include="../../src/UniversalConverter.Contracts/UniversalConverter.Contracts.csproj" />
+    <ProjectReference Include="../../src/UniversalConverter.Domain/UniversalConverter.Domain.csproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

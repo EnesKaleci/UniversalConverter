@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <Version>0.1.0</Version>
+    <AvaloniaUseCompiledBindingsByDefault>True</AvaloniaUseCompiledBindingsByDefault>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="UniversalConverter.Infrastructure.Tests" />
+    <AssemblyMetadata Include="DeploymentLayout" Value="single-file" Condition="'$(PublishSingleFile)' == 'true'" />
+    <AssemblyMetadata Include="DeploymentLayout" Value="multi-file" Condition="'$(PublishSingleFile)' != 'true' And '$(SelfContained)' == 'true' And '$(RuntimeIdentifier)' == 'win-x64'" />
+    <ProjectReference Include="../UniversalConverter.Application/UniversalConverter.Application.csproj" />
+    <ProjectReference Include="../UniversalConverter.Contracts/UniversalConverter.Contracts.csproj" />
+    <ProjectReference Include="../UniversalConverter.Domain/UniversalConverter.Domain.csproj" />
+    <ProjectReference Include="../UniversalConverter.Infrastructure/UniversalConverter.Infrastructure.csproj" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Tmds.DBus.Protocol" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Serilog.Extensions.Hosting" />
+    <PackageReference Include="Serilog.Sinks.File" />
+  </ItemGroup>
+</Project>
