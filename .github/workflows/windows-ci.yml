@@ -17,7 +17,6 @@ jobs:
     env:
       DOTNET_NOLOGO: 'true'
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
-      CONVERTER_DATA_DIRECTORY: ${{ runner.temp }}/UniversalConverterSmoke
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -41,6 +40,8 @@ jobs:
           dotnet publish src/UniversalConverter.Desktop -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=false -p:PublishTrimmed=false -o artifacts/publish
       - name: Smoke test published Windows window
+        env:
+          CONVERTER_DATA_DIRECTORY: ${{ runner.temp }}/UniversalConverterSmoke
         shell: pwsh
         run: |
           $exe = (Resolve-Path artifacts/publish/UniversalConverter.Desktop.exe).Path
