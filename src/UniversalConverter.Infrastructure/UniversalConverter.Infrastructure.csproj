@@ -4,5 +4,6 @@
     <ProjectReference Include="../UniversalConverter.Contracts/UniversalConverter.Contracts.csproj" />
     <ProjectReference Include="../UniversalConverter.Domain/UniversalConverter.Domain.csproj" />
     <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
   </ItemGroup>
 </Project>

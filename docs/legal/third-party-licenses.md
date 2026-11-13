@@ -8,6 +8,8 @@ Application source is GPL-3.0-or-later. The repository includes the unmodified G
 | CommunityToolkit.Mvvm | MIT | [.NET Community Toolkit](https://github.com/CommunityToolkit/dotnet) |
 | Microsoft.Extensions.Hosting and DependencyInjection | MIT | [.NET Runtime](https://github.com/dotnet/runtime) |
 | Microsoft.Data.Sqlite | MIT | [EF Core](https://github.com/dotnet/efcore) |
+| SQLitePCLRaw bundle | Apache-2.0 | [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw) |
+| Tmds.DBus.Protocol | MIT | [Tmds.DBus](https://github.com/tmds/Tmds.DBus) |
 | SQLite native engine | Public domain | [SQLite copyright](https://sqlite.org/copyright.html) |
 | Serilog hosting integration and file sink | Apache-2.0 | [Hosting](https://github.com/serilog/serilog-extensions-hosting), [file sink](https://github.com/serilog/serilog-sinks-file) |
 | Microsoft.NET.Test.Sdk | MIT | [VSTest](https://github.com/microsoft/vstest) |
