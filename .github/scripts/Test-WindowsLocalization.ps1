@@ -150,8 +150,23 @@ function Test-TurkishFile {
         throw
     }
     $dialog = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
-    $entry = Wait-ForResult { Get-UiElement $dialog '1148' } 'native filename field'
-    $entry.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($file)
+    $entry = Wait-ForResult {
+        $fileName = Get-UiElement $dialog '1148'
+        $candidates = @($fileName)
+        if ($fileName) {
+            $edits = [System.Windows.Automation.PropertyCondition]::new(
+                [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+                [System.Windows.Automation.ControlType]::Edit)
+            $candidates += @($fileName.FindAll([System.Windows.Automation.TreeScope]::Descendants, $edits))
+        }
+        foreach ($candidate in $candidates) {
+            $value = $null
+            if ($candidate -and $candidate.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$value) -and -not $value.Current.IsReadOnly) {
+                return $value
+            }
+        }
+    } 'writable native filename field'
+    $entry.SetValue($file)
     $open = Wait-ForResult { Get-UiElement $dialog '1' } 'native Open button'
     $open.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
     $inputs = Wait-ForResult { Get-UiElement $Window 'InputFiles' } 'input list'
