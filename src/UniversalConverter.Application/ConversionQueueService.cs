@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using UniversalConverter.Contracts;
 using UniversalConverter.Domain;
 
 namespace UniversalConverter.Application;
