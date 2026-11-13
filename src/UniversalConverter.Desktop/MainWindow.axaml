@@ -73,7 +73,7 @@
               <Button Classes="accent" AutomationProperties.AutomationId="QueueSimulation" Content="{Binding Text.QueueSimulation}" Command="{Binding QueueSimulationCommand}" />
               <Button Content="{Binding Text.ClearFiles}" Command="{Binding ClearFilesCommand}" />
             </StackPanel>
-            <TextBlock Classes="secondary" Text="{Binding InputMessage}" />
+            <TextBlock Classes="secondary" AutomationProperties.AutomationId="InputMessage" Text="{Binding InputMessage}" />
           </StackPanel>
           <StackPanel IsVisible="{Binding IsQueue}" Spacing="12">
             <TextBlock Classes="secondary" Text="{Binding QueueSummary}" />

@@ -190,6 +190,7 @@ public partial class MainWindowViewModel : ObservableObject
     public void ReportPickerFailure(Exception exception)
     {
         SetInputNotice("PickerFailure");
+        _startup.Exception("File picker failed", exception);
         _logger.LogWarning("File picker failed ({ErrorType}).", exception.GetType().Name);
     }
 

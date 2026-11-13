@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Avalonia;
 
 namespace UniversalConverter.Desktop;
@@ -20,7 +21,7 @@ internal static class Program
         Localization = UiLocalization.FromSystem();
         var diagnostic = StartupChecks.IsDiagnosticMode(args);
         if (diagnostic && OperatingSystem.IsWindows())
-            TryAttachConsole();
+            ConfigureDiagnosticsConsole();
 
         string? fallback = null;
         try { fallback = Path.Combine(Path.GetTempPath(), "UniversalConverter", "logs"); }
@@ -150,18 +151,21 @@ internal static class Program
         Localization.Apply(settings.LoadLanguageAsync().GetAwaiter().GetResult());
     }
 
-    private static void TryAttachConsole()
+    private static void ConfigureDiagnosticsConsole()
     {
         try
         {
-            // A GUI subsystem process has no console by default. Keep inherited redirection intact.
-            if (GetFileType(GetStdHandle(-11)) is 1 or 3)
+            // A GUI subsystem process may inherit pipes or a parent console.
+            var redirected = GetFileType(GetStdHandle(-11)) is 1 or 3;
+            var attached = !redirected && AttachConsole(uint.MaxValue);
+            if (!redirected && !attached)
                 return;
-            if (AttachConsole(uint.MaxValue))
-            {
-                Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
-                Console.SetError(new StreamWriter(Console.OpenStandardError()) { AutoFlush = true });
-            }
+
+            if (attached)
+                Console.OutputEncoding = Encoding.Unicode;
+            Encoding encoding = attached ? new UnicodeEncoding(false, false) : new UTF8Encoding(false);
+            Console.SetOut(new StreamWriter(Console.OpenStandardOutput(), encoding) { AutoFlush = true });
+            Console.SetError(new StreamWriter(Console.OpenStandardError(), encoding) { AutoFlush = true });
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or ExternalException) { }
     }

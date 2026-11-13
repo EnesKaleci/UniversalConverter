@@ -1,5 +1,42 @@
 ﻿$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+Add-Type @'
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
+
+public static class ConverterTestWindows
+{
+    private delegate bool EnumWindow(IntPtr window, IntPtr param);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindow callback, IntPtr param);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr window);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out int process);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowText(IntPtr window, StringBuilder text, int capacity);
+
+    public static IntPtr[] VisibleWindows(int processId)
+    {
+        var handles = new List<IntPtr>();
+        EnumWindows((window, param) =>
+        {
+            int owner;
+            GetWindowThreadProcessId(window, out owner);
+            if (owner == processId && IsWindowVisible(window))
+                handles.Add(window);
+            return true;
+        }, IntPtr.Zero);
+        return handles.ToArray();
+    }
+
+    public static string Title(IntPtr window)
+    {
+        var text = new StringBuilder(512);
+        GetWindowText(window, text, text.Capacity);
+        return text.ToString();
+    }
+}
+'@
 
 $root = $env:PACKAGE_TEST_ROOT
 $exe = Join-Path $root 'extracted\UniversalConverter.Desktop.exe'
@@ -87,26 +124,32 @@ function Test-Language {
 }
 
 function Test-TurkishFile {
-    param($Window, $Process)
+    param($Window, $Process, [IntPtr]$MainHandle)
     $folder = Join-Path $work 'Çalışma öğeleri'
     New-Item -ItemType Directory -Path $folder | Out-Null
     $file = Join-Path $folder 'İşık ışıĞı Şüphe.PNG'
     [IO.File]::WriteAllBytes($file, [Convert]::FromBase64String(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jD2EAAAAASUVORK5CYII='))
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGOQqzgBAAIWAV+8KCb8AAAAAElFTkSuQmCC'))
 
     Set-Selection $Window 'NavConvert'
     $choose = Wait-ForResult { Get-UiElement $Window 'ChooseFiles' } 'file picker button'
     $choose.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
 
-    $dialog = Wait-ForResult {
-        $desktop = [System.Windows.Automation.AutomationElement]::RootElement
-        $sameProcess = [System.Windows.Automation.PropertyCondition]::new(
-            [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $Process.Id)
-        $desktop.FindAll([System.Windows.Automation.TreeScope]::Children, $sameProcess) |
-            Where-Object { $_.Current.ClassName -eq '#32770' -and $_.Current.Name -ceq 'Görselleri seç' } |
-            Select-Object -First 1
-    } 'Turkish file dialog'
-
+    try {
+        $handle = Wait-ForResult {
+            [ConverterTestWindows]::VisibleWindows($Process.Id) |
+                Where-Object { $_ -ne $MainHandle -and [ConverterTestWindows]::Title($_) -ceq 'Görselleri seç' } |
+                Select-Object -First 1
+        } 'Turkish file dialog'
+    } catch {
+        foreach ($candidate in [ConverterTestWindows]::VisibleWindows($Process.Id)) {
+            Write-Host ("App window {0}: {1}" -f $candidate, [ConverterTestWindows]::Title($candidate))
+        }
+        $notice = Get-UiElement $Window 'InputMessage'
+        if ($notice) { Write-Host "Picker status: $($notice.Current.Name)" }
+        throw
+    }
+    $dialog = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
     $entry = Wait-ForResult { Get-UiElement $dialog '1148' } 'native filename field'
     $entry.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($file)
     $open = Wait-ForResult { Get-UiElement $dialog '1' } 'native Open button'
@@ -145,7 +188,7 @@ try {
         Assert-UiName $window 'LanguageMessage' 'Language preference saved.'
     }
     Test-Language $window 'LanguageTurkish' $turkish $turkishBanner 'Dil tercihi kaydedildi.'
-    Test-TurkishFile $window $process
+    Test-TurkishFile $window $process $process.MainWindowHandle
     Test-Language $window 'LanguageEnglish' $english $englishBanner 'Language preference saved.'
     Test-Language $window 'LanguageTurkish' $turkish $turkishBanner 'Dil tercihi kaydedildi.'
     Stop-Cleanly $process
@@ -164,4 +207,17 @@ try {
     if (-not $process.HasExited) { $process.Kill() }
     $process.Dispose()
 }
-Write-Host 'Single-file Turkish/English live switching, six screens and SQLite reload passed.'
+$diagnosticStart = [Diagnostics.ProcessStartInfo]::new($exe, '--diagnostics')
+$diagnosticStart.UseShellExecute = $false
+$diagnosticStart.RedirectStandardOutput = $true
+$diagnosticStart.StandardOutputEncoding = [Text.Encoding]::UTF8
+$diagnostic = [Diagnostics.Process]::Start($diagnosticStart)
+try {
+    $output = $diagnostic.StandardOutput.ReadToEndAsync()
+    if (-not $diagnostic.WaitForExit(15000) -or $diagnostic.ExitCode -ne 0) { throw 'Localized diagnostics failed.' }
+    if (-not $output.GetAwaiter().GetResult().Contains('Tanılama başarılı.')) { throw 'Turkish diagnostics text was not received intact.' }
+} finally {
+    if (-not $diagnostic.HasExited) { $diagnostic.Kill() }
+    $diagnostic.Dispose()
+}
+Write-Host 'Single-file Turkish/English live switching, six screens, SQLite reload and UTF-8 diagnostics passed.'
