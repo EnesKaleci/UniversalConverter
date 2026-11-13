@@ -19,6 +19,8 @@ public static class ConverterTestWindows
     private static extern IntPtr SendMessageTimeout(IntPtr window, uint message, IntPtr wParam, string text,
         uint flags, uint timeout, out IntPtr result);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr window);
+    [DllImport("user32.dll")] private static extern IntPtr GetDlgItem(IntPtr dialog, int id);
+    [DllImport("user32.dll")] private static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out int process);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetWindowText(IntPtr window, StringBuilder text, int capacity);
@@ -69,6 +71,14 @@ public static class ConverterTestWindows
         IntPtr result;
         return SendMessageTimeout(edit, SetText, IntPtr.Zero, value, AbortIfHung, 2000, out result) != IntPtr.Zero &&
             result != IntPtr.Zero;
+    }
+
+    public static bool OpenSelectedFile(IntPtr dialog)
+    {
+        const int IdOk = 1;
+        const uint ButtonClick = 0x00F5;
+        var button = GetDlgItem(dialog, IdOk);
+        return button != IntPtr.Zero && PostMessage(button, ButtonClick, IntPtr.Zero, IntPtr.Zero);
     }
 
     public static string Title(IntPtr window)
@@ -191,14 +201,12 @@ function Test-TurkishFile {
         if ($notice) { Write-Host "Picker status: $($notice.Current.Name)" }
         throw
     }
-    $dialog = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
     $edit = Wait-ForResult {
         $control = [ConverterTestWindows]::FileNameEdit($handle)
         if ($control -ne [IntPtr]::Zero) { $control }
     } 'native filename edit'
     if (-not [ConverterTestWindows]::SetFileName($edit, $file)) { throw 'Could not enter the Unicode path.' }
-    $open = Wait-ForResult { Get-UiElement $dialog '1' } 'native Open button'
-    $open.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    if (-not [ConverterTestWindows]::OpenSelectedFile($handle)) { throw 'Could not invoke the native Open button.' }
     $null = Wait-ForResult { Get-VisibleUiText $Window $file } 'original Turkish file path'
     $submit = Get-UiElement $Window 'QueueSimulation'
     $submit.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
