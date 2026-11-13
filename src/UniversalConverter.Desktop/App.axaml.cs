@@ -47,7 +47,14 @@ public partial class App : Avalonia.Application
         builder.Services.AddSingleton<IConversionPlanner, ConversionPlanner>();
         builder.Services.AddSingleton<ConversionCoordinator>();
         builder.Services.AddSingleton<ConversionQueueService>();
-        builder.Services.AddSingleton<MainWindowViewModel>();
+        builder.Services.AddSingleton(Program.Localization);
+        builder.Services.AddSingleton(Program.Startup);
+        builder.Services.AddSingleton(services => new MainWindowViewModel(
+            services.GetRequiredService<ConversionQueueService>(),
+            services.GetRequiredService<ISettingsStore>(),
+            services.GetRequiredService<UiLocalization>(),
+            services.GetRequiredService<StartupLog>(),
+            services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MainWindowViewModel>>()));
 
         var host = builder.Build();
         try

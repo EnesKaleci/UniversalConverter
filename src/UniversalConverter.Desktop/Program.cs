@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Avalonia;
 
 namespace UniversalConverter.Desktop;
@@ -10,15 +11,17 @@ internal static class Program
     private const int DiagnosticsFailed = 2;
     private const int AppControlBlocked = 3;
 
+    internal static UiLocalization Localization { get; private set; } = null!;
     internal static StartupLog Startup { get; private set; } = null!;
     internal static string DataDirectory { get; private set; } = "";
 
     [STAThread]
     public static int Main(string[] args)
     {
+        Localization = UiLocalization.FromSystem();
         var diagnostic = StartupChecks.IsDiagnosticMode(args);
         if (diagnostic && OperatingSystem.IsWindows())
-            TryAttachConsole();
+            ConfigureDiagnosticsConsole();
 
         string? fallback = null;
         try { fallback = Path.Combine(Path.GetTempPath(), "UniversalConverter", "logs"); }
@@ -51,15 +54,15 @@ internal static class Program
             Startup.Write(diagnostic ? "Diagnostic mode started" : "Managed startup entered");
             var result = diagnostic ? RunDiagnostics() : RunDesktop(args);
             if (diagnostic)
-                Console.WriteLine($"Diagnostics {(result == 0 ? "PASS" : "FAIL")}. Log: {Startup.LogPath ?? "unavailable"}");
+                Console.WriteLine($"{Localization.Text.Get(result == 0 ? "DiagnosticsPassed" : "DiagnosticsFailed")} {LogLocation()}");
             return result;
         }
         catch (Exception ex)
         {
             var blocked = StartupChecks.IsAppControlBlock(ex);
             Startup.Exception(blocked ? "Windows App Control block (0x800711C7)" : "Fatal startup failure", ex);
-            var guidance = StartupChecks.DescribeFailure(ex);
-            var message = $"Universal Converter could not start.{Environment.NewLine}{guidance}{Environment.NewLine}Log: {Startup.LogPath ?? "unavailable"}";
+            var guidance = StartupChecks.DescribeFailure(ex, Localization.Text);
+            var message = string.Join(Environment.NewLine, Localization.Text.Get("StartupFailure"), guidance, LogLocation());
             try { Console.Error.WriteLine(message); }
             catch (IOException) { }
             if (!diagnostic && OperatingSystem.IsWindows())
@@ -83,7 +86,7 @@ internal static class Program
         var layout = typeof(Program).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
             .FirstOrDefault(attribute => attribute.Key == "DeploymentLayout")?.Value ?? "development";
         Startup.Write($"Deployment: {layout}");
-        var status = 0;
+        var status = Check("SQLite settings", "DiagnosticSqlite", ProbeSqlite);
         if (OperatingSystem.IsWindows() && layout == "multi-file")
         {
             var missing = StartupChecks.MissingFiles(AppContext.BaseDirectory,
@@ -91,32 +94,34 @@ internal static class Program
             foreach (var file in missing)
             {
                 Startup.Write($"Package file missing: {file}");
-                Console.WriteLine($"Package file missing: {file}. Extract the complete ZIP.");
+                Console.WriteLine(Localization.Text.Format("MissingPackageFile", file));
             }
             if (missing.Count > 0)
-                status = DiagnosticsFailed;
+                status = Math.Max(status, DiagnosticsFailed);
         }
 
-        status = Math.Max(status, Check("Skia native library", ProbeSkia));
-        status = Math.Max(status, Check("HarfBuzz native library", ProbeHarfBuzz));
-        status = Math.Max(status, Check("SQLite settings", ProbeSqlite));
+        status = Math.Max(status, Check("Skia native library", "DiagnosticSkia", ProbeSkia));
+        status = Math.Max(status, Check("HarfBuzz native library", "DiagnosticHarfBuzz", ProbeHarfBuzz));
         Startup.Write(status == 0 ? "Diagnostics: PASS" : "Diagnostics: FAIL");
         return status;
     }
 
-    private static int Check(string name, Action probe)
+    private static string LogLocation() => Localization.Text.Format("LogLocation", Startup.LogPath ?? Localization.Text.Get("LogUnavailable"));
+
+    private static int Check(string name, string labelKey, Action probe)
     {
         try
         {
             probe();
             Startup.Write($"{name}: PASS");
-            Console.WriteLine($"{name}: PASS");
+            Console.WriteLine(Localization.Text.Format("DiagnosticCheckPassed", Localization.Text.Get(labelKey)));
             return 0;
         }
         catch (Exception ex)
         {
             Startup.Exception($"{name}: FAIL", ex);
-            Console.WriteLine($"{name}: FAIL. {StartupChecks.DescribeFailure(ex)}");
+            var text = Localization.Text;
+            Console.WriteLine(text.Format("DiagnosticCheckFailed", text.Get(labelKey), StartupChecks.DescribeFailure(ex, text)));
             return StartupChecks.IsAppControlBlock(ex) ? AppControlBlocked : DiagnosticsFailed;
         }
     }
@@ -142,28 +147,32 @@ internal static class Program
         Directory.CreateDirectory(DataDirectory);
         var path = Path.Combine(DataDirectory, Path.GetRandomFileName());
         using (new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose)) { }
-        new UniversalConverter.Infrastructure.SettingsDatabase(Path.Combine(DataDirectory, "settings.db")).LoadThemeAsync().GetAwaiter().GetResult();
+        var settings = new UniversalConverter.Infrastructure.SettingsDatabase(Path.Combine(DataDirectory, "settings.db"));
+        Localization.Apply(settings.LoadLanguageAsync().GetAwaiter().GetResult());
     }
 
-    private static void TryAttachConsole()
+    private static void ConfigureDiagnosticsConsole()
     {
         try
         {
-            // A GUI subsystem process has no console by default. Keep inherited redirection intact.
-            if (GetFileType(GetStdHandle(-11)) is 1 or 3)
+            // A GUI subsystem process may inherit pipes or a parent console.
+            var redirected = GetFileType(GetStdHandle(-11)) is 1 or 3;
+            var attached = !redirected && AttachConsole(uint.MaxValue);
+            if (!redirected && !attached)
                 return;
-            if (AttachConsole(uint.MaxValue))
-            {
-                Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
-                Console.SetError(new StreamWriter(Console.OpenStandardError()) { AutoFlush = true });
-            }
+
+            if (attached)
+                Console.OutputEncoding = Encoding.Unicode;
+            Encoding encoding = attached ? new UnicodeEncoding(false, false) : new UTF8Encoding(false);
+            Console.SetOut(new StreamWriter(Console.OpenStandardOutput(), encoding) { AutoFlush = true });
+            Console.SetError(new StreamWriter(Console.OpenStandardError(), encoding) { AutoFlush = true });
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or ExternalException) { }
     }
 
     private static void TryShowError(string message)
     {
-        try { MessageBoxW(IntPtr.Zero, message, "Universal Converter", 0x10); }
+        try { MessageBoxW(IntPtr.Zero, message, Localization.Text.AppName, 0x10); }
         catch (Exception ex) when (ex is ExternalException or DllNotFoundException or EntryPointNotFoundException) { }
     }
 

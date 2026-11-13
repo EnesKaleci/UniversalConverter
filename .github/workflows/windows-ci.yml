@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, 'codex/**']
   pull_request:
-    branches: [main]
+    branches: [main, 'codex/m0-foundation']
   workflow_dispatch:
 
 permissions:
@@ -49,10 +49,10 @@ jobs:
         include:
           - layout: multi-file
             single_file: 'false'
-            artifact: UniversalConverter-M0.1-Windows-x64
+            artifact: UniversalConverter-M1-Localization-Windows-x64
           - layout: single-file
             single_file: 'true'
-            artifact: UniversalConverter-M0.1-Windows-x64-SingleFile
+            artifact: UniversalConverter-M1-Localization-Windows-x64-SingleFile
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -69,8 +69,14 @@ jobs:
         env:
           ARTIFACT_NAME: ${{ matrix.artifact }}
           PACKAGE_LAYOUT: ${{ matrix.layout }}
-          PACKAGE_TEST_ROOT: ${{ runner.temp }}/UniversalConverter-M0.1
-        run: ./.github/scripts/Test-WindowsPortable.ps1
+          PACKAGE_TEST_ROOT: ${{ runner.temp }}/UniversalConverter-M1-Localization
+        run: |
+          ./.github/scripts/Test-WindowsPortable.ps1
+          if ($env:PACKAGE_LAYOUT -eq 'single-file') {
+            $guiTest = Join-Path $PWD '.github/scripts/Test-WindowsLocalization.ps1'
+            & powershell.exe -NoProfile -NonInteractive -File $guiTest
+            if ($LASTEXITCODE -ne 0) { throw 'Windows localization smoke test failed.' }
+          }
       - name: Upload Windows portable ZIP and SHA-256
         uses: actions/upload-artifact@v4
         with:
@@ -84,5 +90,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Windows-startup-logs-${{ matrix.layout }}
-          path: ${{ runner.temp }}/UniversalConverter-M0.1/*-data/logs/startup-*.log
+          path: ${{ runner.temp }}/UniversalConverter-M1-Localization/*-data/logs/startup-*.log
           if-no-files-found: ignore

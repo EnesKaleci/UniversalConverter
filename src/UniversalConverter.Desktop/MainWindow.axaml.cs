@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Microsoft.Extensions.Hosting;
 using UniversalConverter.Contracts;
 
@@ -9,6 +10,7 @@ namespace UniversalConverter.Desktop;
 
 public partial class MainWindow : Window
 {
+    private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMilliseconds(150) };
     private bool _closing;
     private bool _closed;
 
@@ -20,9 +22,11 @@ public partial class MainWindow : Window
         DropZone.AddHandler(DragDrop.DragOverEvent, OnDragOver);
         DropZone.AddHandler(DragDrop.DropEvent, OnDrop);
         viewModel.ThemeChanged += ApplyTheme;
+        _refreshTimer.Tick += (_, _) => viewModel.Refresh();
         Opened += async (_, _) =>
         {
             Program.Startup.Write("Main window opened");
+            _refreshTimer.Start();
             await viewModel.InitializeAsync();
         };
         Closing += (_, e) => OnClosing(e, viewModel, host);
@@ -44,9 +48,9 @@ public partial class MainWindow : Window
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Choose images",
+                Title = viewModel.Text.PickerTitle,
                 AllowMultiple = true,
-                FileTypeFilter = [new FilePickerFileType("Simulation images") { Patterns = ["*.png", "*.jpg", "*.webp"] }]
+                FileTypeFilter = [new FilePickerFileType(viewModel.Text.PickerFilter) { Patterns = ["*.png", "*.jpg", "*.webp"] }]
             });
             viewModel.AddFiles(files.Select(file => file.TryGetLocalPath()).OfType<string>());
         }
@@ -79,7 +83,7 @@ public partial class MainWindow : Window
             return;
         _closing = true;
         IsEnabled = false;
-        viewModel.Stop();
+        _refreshTimer.Stop();
         try
         {
             await viewModel.ShutdownAsync();
