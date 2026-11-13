@@ -2,7 +2,9 @@
 
 Core xUnit tests cover format and job invariants, architecture references, planning, bounded queue behavior, progress, failures, cancellation and shutdown. Infrastructure tests cover SQLite settings, temporary files, process allowlisting and simulation behavior. Synchronization gates drive core queue tests, with deadlines for deadlock detection.
 
-Windows CI builds, tests and publishes a self-contained x64 directory. It checks the published executable opens a Windows main window with the expected title and closes successfully. TRX files report the actual xUnit results. A Windows CI window check provides startup evidence on the runner.
+Windows CI builds and runs xUnit, then publishes both self-contained Windows x64 layouts. It verifies extracted ZIP files against the publish output, records signatures and ZIP SHA-256, and runs diagnostics and GUI smoke tests from the extracted packages with separate clean data directories. It verifies SQLite initialization, startup logs and graceful shutdown. The single-file check inspects native extraction. The multi-file check also tests diagnostics with a missing Infrastructure DLL. TRX files report actual xUnit results.
+
+The hosted runner establishes packaging and startup behavior under its own configuration. It does not establish behavior for internet-downloaded artifacts under an end user's App Control policy. Follow the [Windows App Control retest procedure](../security/windows-app-control.md) when reproducing a policy block.
 
 ## Windows user acceptance
 

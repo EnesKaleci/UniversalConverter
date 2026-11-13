@@ -1,10 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <Version>0.1.0</Version>
     <AvaloniaUseCompiledBindingsByDefault>True</AvaloniaUseCompiledBindingsByDefault>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="UniversalConverter.Infrastructure.Tests" />
+    <AssemblyMetadata Include="DeploymentLayout" Value="single-file" Condition="'$(PublishSingleFile)' == 'true'" />
+    <AssemblyMetadata Include="DeploymentLayout" Value="multi-file" Condition="'$(PublishSingleFile)' != 'true' And '$(SelfContained)' == 'true' And '$(RuntimeIdentifier)' == 'win-x64'" />
     <ProjectReference Include="../UniversalConverter.Application/UniversalConverter.Application.csproj" />
     <ProjectReference Include="../UniversalConverter.Contracts/UniversalConverter.Contracts.csproj" />
     <ProjectReference Include="../UniversalConverter.Domain/UniversalConverter.Domain.csproj" />

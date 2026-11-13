@@ -10,13 +10,15 @@ on:
 permissions:
   contents: read
 
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
 jobs:
-  windows:
+  test:
+    name: Build and test
     runs-on: windows-latest
-    timeout-minutes: 20
-    env:
-      DOTNET_NOLOGO: 'true'
-      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -35,48 +37,52 @@ jobs:
           name: Windows-xUnit-results
           path: artifacts/test-results/*.trx
           if-no-files-found: ignore
+
+  portable:
+    name: Windows x64 · ${{ matrix.layout }}
+    needs: test
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - layout: multi-file
+            single_file: 'false'
+            artifact: UniversalConverter-M0.1-Windows-x64
+          - layout: single-file
+            single_file: 'true'
+            artifact: UniversalConverter-M0.1-Windows-x64-SingleFile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
       - name: Publish Windows x64 self-contained
         run: >
           dotnet publish src/UniversalConverter.Desktop -c Release -r win-x64 --self-contained true
-          -p:PublishSingleFile=false -p:PublishTrimmed=false -o artifacts/publish
-      - name: Smoke test published Windows window
+          -p:PublishSingleFile=${{ matrix.single_file }}
+          -p:IncludeNativeLibrariesForSelfExtract=${{ matrix.single_file }}
+          -p:PublishTrimmed=false -o artifacts/publish
+      - name: Package, verify and test extracted ZIP
+        shell: pwsh
         env:
-          CONVERTER_DATA_DIRECTORY: ${{ runner.temp }}/UniversalConverterSmoke
-        shell: pwsh
-        run: |
-          $exe = (Resolve-Path artifacts/publish/UniversalConverter.Desktop.exe).Path
-          $process = [System.Diagnostics.Process]::Start($exe)
-          try {
-            $deadline = [DateTime]::UtcNow.AddSeconds(25)
-            do {
-              Start-Sleep -Milliseconds 250
-              $process.Refresh()
-              if ($process.HasExited) { throw "Application exited before opening a window ($($process.ExitCode))." }
-            } while ($process.MainWindowHandle -eq [IntPtr]::Zero -and [DateTime]::UtcNow -lt $deadline)
-            if ($process.MainWindowHandle -eq [IntPtr]::Zero) { throw 'Main window did not appear.' }
-            if ($process.MainWindowTitle -ne 'Universal Converter') { throw "Unexpected window title: $($process.MainWindowTitle)" }
-            $database = Join-Path $env:CONVERTER_DATA_DIRECTORY "settings.db"
-            while (-not (Test-Path $database) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 250 }
-            if (-not (Test-Path $database)) { throw "Settings database was not initialized." }
-            if (-not $process.CloseMainWindow()) { throw 'Could not request a graceful window close.' }
-            if (-not $process.WaitForExit(10000)) { throw 'Application did not shut down.' }
-            if ($process.ExitCode -ne 0) { throw "Application exited with code $($process.ExitCode)." }
-          } finally {
-            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
-            $process.Dispose()
-          }
-      - name: Create portable ZIP with corresponding project source
-        shell: pwsh
-        run: |
-          Copy-Item LICENSE, README.md artifacts/publish/
-          Copy-Item docs/legal artifacts/publish/legal -Recurse
-          git archive --format=zip --output=artifacts/publish/UniversalConverter-source.zip HEAD
-          if ($LASTEXITCODE -ne 0) { throw 'Could not archive corresponding source.' }
-          Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/UniversalConverter-M0-Windows-x64.zip
-          Get-FileHash -Algorithm SHA256 artifacts/UniversalConverter-M0-Windows-x64.zip
-      - name: Upload Windows portable ZIP
+          ARTIFACT_NAME: ${{ matrix.artifact }}
+          PACKAGE_LAYOUT: ${{ matrix.layout }}
+          PACKAGE_TEST_ROOT: ${{ runner.temp }}/UniversalConverter-M0.1
+        run: ./.github/scripts/Test-WindowsPortable.ps1
+      - name: Upload Windows portable ZIP and SHA-256
         uses: actions/upload-artifact@v4
         with:
-          name: UniversalConverter-M0-Windows-x64
-          path: artifacts/UniversalConverter-M0-Windows-x64.zip
+          name: ${{ matrix.artifact }}
+          path: |
+            artifacts/${{ matrix.artifact }}.zip
+            artifacts/${{ matrix.artifact }}.zip.sha256
           if-no-files-found: error
+      - name: Upload smoke-test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-startup-logs-${{ matrix.layout }}
+          path: ${{ runner.temp }}/UniversalConverter-M0.1/*-data/logs/startup-*.log
+          if-no-files-found: ignore

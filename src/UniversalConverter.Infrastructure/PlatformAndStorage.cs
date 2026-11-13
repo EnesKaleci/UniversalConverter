@@ -9,10 +9,6 @@ public static class PlatformDetection
         OperatingSystem.IsMacOS() ? DesktopPlatform.MacOS :
         OperatingSystem.IsLinux() ? DesktopPlatform.Linux : DesktopPlatform.Unknown;
 
-    public static string DataDirectory =>
-        Environment.GetEnvironmentVariable("CONVERTER_DATA_DIRECTORY") is { Length: > 0 } overridePath
-            ? Path.GetFullPath(overridePath)
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UniversalConverter");
 }
 
 public sealed class TemporaryWorkspace : IDisposable

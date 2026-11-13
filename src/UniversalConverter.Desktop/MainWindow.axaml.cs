@@ -9,22 +9,23 @@ namespace UniversalConverter.Desktop;
 
 public partial class MainWindow : Window
 {
-    private readonly MainWindowViewModel _viewModel;
-    private readonly IHost _host;
     private bool _closing;
     private bool _closed;
 
-    public MainWindow(MainWindowViewModel viewModel, IHost host)
+    public MainWindow() => InitializeComponent();
+
+    public MainWindow(MainWindowViewModel viewModel, IHost host) : this()
     {
-        _viewModel = viewModel;
-        _host = host;
-        InitializeComponent();
         DataContext = viewModel;
         DropZone.AddHandler(DragDrop.DragOverEvent, OnDragOver);
         DropZone.AddHandler(DragDrop.DropEvent, OnDrop);
-        _viewModel.ThemeChanged += ApplyTheme;
-        Opened += async (_, _) => await _viewModel.InitializeAsync();
-        Closing += OnClosing;
+        viewModel.ThemeChanged += ApplyTheme;
+        Opened += async (_, _) =>
+        {
+            Program.Startup.Write("Main window opened");
+            await viewModel.InitializeAsync();
+        };
+        Closing += (_, e) => OnClosing(e, viewModel, host);
     }
 
     private void ApplyTheme(ThemePreference theme) =>
@@ -37,6 +38,8 @@ public partial class MainWindow : Window
 
     private async void OnChooseFiles(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (DataContext is not MainWindowViewModel viewModel)
+            return;
         try
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -45,11 +48,11 @@ public partial class MainWindow : Window
                 AllowMultiple = true,
                 FileTypeFilter = [new FilePickerFileType("Simulation images") { Patterns = ["*.png", "*.jpg", "*.webp"] }]
             });
-            _viewModel.AddFiles(files.Select(file => file.TryGetLocalPath()).OfType<string>());
+            viewModel.AddFiles(files.Select(file => file.TryGetLocalPath()).OfType<string>());
         }
         catch (Exception exception)
         {
-            _viewModel.ReportPickerFailure(exception);
+            viewModel.ReportPickerFailure(exception);
         }
     }
 
@@ -62,12 +65,12 @@ public partial class MainWindow : Window
     private void OnDrop(object? sender, DragEventArgs e)
     {
         var items = e.DataTransfer.TryGetFiles();
-        if (items is not null)
-            _viewModel.AddFiles(items.OfType<IStorageFile>().Select(file => file.TryGetLocalPath()).OfType<string>());
+        if (items is not null && DataContext is MainWindowViewModel viewModel)
+            viewModel.AddFiles(items.OfType<IStorageFile>().Select(file => file.TryGetLocalPath()).OfType<string>());
         e.Handled = true;
     }
 
-    private async void OnClosing(object? sender, WindowClosingEventArgs e)
+    private async void OnClosing(WindowClosingEventArgs e, MainWindowViewModel viewModel, IHost host)
     {
         if (_closed)
             return;
@@ -76,18 +79,18 @@ public partial class MainWindow : Window
             return;
         _closing = true;
         IsEnabled = false;
-        _viewModel.Stop();
+        viewModel.Stop();
         try
         {
-            await _viewModel.ShutdownAsync();
-            await _host.StopAsync(TimeSpan.FromSeconds(5));
+            await viewModel.ShutdownAsync();
+            await host.StopAsync(TimeSpan.FromSeconds(5));
         }
         finally
         {
-            if (_host is IAsyncDisposable asyncHost)
+            if (host is IAsyncDisposable asyncHost)
                 await asyncHost.DisposeAsync();
             else
-                _host.Dispose();
+                host.Dispose();
             _closed = true;
             Close();
         }

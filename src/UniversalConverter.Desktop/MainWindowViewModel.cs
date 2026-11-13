@@ -74,10 +74,12 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             SelectedTheme = await _settings.LoadThemeAsync();
+            Program.Startup.Write("SQLite settings initialized");
             _logger.LogInformation("Universal Converter M0 started on {Platform}", PlatformDetection.Current);
         }
         catch (Exception exception)
         {
+            Program.Startup.Exception("SQLite settings initialization failed", exception);
             SettingsMessage = "Could not load preferences. System theme is active.";
             _logger.LogWarning("Settings initialization failed ({ErrorType}).", exception.GetType().Name);
         }
