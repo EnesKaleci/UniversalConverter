@@ -90,11 +90,15 @@ function Test-Diagnostics {
     try {
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
-        if (-not $process.WaitForExit(30000)) { throw 'Diagnostics timed out.' }
+        $deadline = [DateTime]::UtcNow.AddSeconds(30)
+        while (-not $process.WaitForExit(50)) {
+            $process.Refresh()
+            if ($process.MainWindowHandle -ne [IntPtr]::Zero) { throw 'Diagnostics unexpectedly opened a window.' }
+            if ([DateTime]::UtcNow -ge $deadline) { throw 'Diagnostics timed out.' }
+        }
         $output = $stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult()
         Write-Host $output
         if ($process.ExitCode -ne $ExpectedExit) { throw "Unexpected diagnostic exit: $($process.ExitCode)." }
-        if ($process.MainWindowHandle -ne [IntPtr]::Zero) { throw 'Diagnostics unexpectedly opened a window.' }
     } finally {
         if (-not $process.HasExited) { $process.Kill() }
         $process.Dispose()
