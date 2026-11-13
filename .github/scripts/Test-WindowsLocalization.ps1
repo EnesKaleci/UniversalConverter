@@ -212,9 +212,19 @@ function Test-TurkishFile {
     $submit.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
     Assert-UiName $Window 'PageTitle' 'Kuyruk'
     Set-Selection $Window 'NavHistory'
-    Assert-UiName $Window 'JobStatus' 'Simülasyon tamamlandı · Dosya oluşturulmadı'
+    Assert-UiName $Window 'PageTitle' 'Geçmiş'
     $jobTitle = [IO.Path]::GetFileName($file) + ' → JPG'
-    $null = Wait-ForResult { Get-VisibleUiText $Window $jobTitle } 'original Turkish filename in History'
+    try {
+        $null = Wait-ForResult { Get-VisibleUiText $Window $jobTitle } 'original Turkish filename in History'
+        $null = Wait-ForResult { Get-VisibleUiText $Window 'Simülasyon tamamlandı · Dosya oluşturulmadı' } 'Turkish job completion'
+    } catch {
+        $Window.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition) |
+            Where-Object { $_.Current.Name } | Select-Object -First 60 |
+            ForEach-Object { Write-Host ("UIA {0}: {1} (offscreen: {2})" -f $_.Current.AutomationId, $_.Current.Name, $_.Current.IsOffscreen) }
+        Get-ChildItem -LiteralPath (Join-Path $data 'logs') -File -Filter 'startup-*.log' |
+            ForEach-Object { Get-Content -LiteralPath $_.FullName }
+        throw
+    }
     if ((Get-ChildItem -LiteralPath $folder -File).Count -ne 1) { throw 'Simulation created an output file.' }
     Write-Host 'Unicode file picker, queue and history passed.'
 }
