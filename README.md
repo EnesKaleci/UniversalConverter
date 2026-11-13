@@ -8,6 +8,12 @@ Universal Converter is an offline-first desktop application targeting Windows fi
 
 M0 simulates conversions between PNG, JPG and WebP. It reads the selected path and extension to prepare a job. It creates no converted files. Use **Convert** to choose or drop files, select a target and queue simulations. **Queue** shows progress and offers cancellation. **History** lists recent results from the current session. **Settings** saves the system, light or dark theme to the local SQLite database.
 
+## Interface language
+
+Open **Settings → Language** (**Ayarlar → Dil**) and select **English** or **Türkçe**. The six screens update immediately and the preference is saved to the local SQLite database. On first launch, the app uses Turkish for a Turkish Windows display language and English for other languages.
+
+İlk açılışta uygulama Windows görüntüleme dilini kullanır. Türkçe dışındaki sistem dillerinde İngilizce açılır. **Ayarlar → Dil** bölümünden seçtiğin dil anında uygulanır ve sonraki açılışta korunur.
+
 ## Build and run
 
 Install the .NET 10 SDK. From the repository root:

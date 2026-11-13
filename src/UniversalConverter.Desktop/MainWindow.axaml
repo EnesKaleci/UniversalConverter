@@ -3,7 +3,7 @@
         xmlns:local="using:UniversalConverter.Desktop"
         x:Class="UniversalConverter.Desktop.MainWindow"
         x:DataType="local:MainWindowViewModel"
-        Title="Universal Converter" Width="1060" Height="700" MinWidth="740" MinHeight="540">
+        Title="{Binding Text.AppName}" Width="1060" Height="700" MinWidth="740" MinHeight="540">
   <Window.Styles>
     <Style Selector="TextBlock.title">
       <Setter Property="FontSize" Value="34" />
@@ -24,25 +24,31 @@
     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" Padding="18">
       <DockPanel LastChildFill="True">
         <StackPanel DockPanel.Dock="Top" Margin="8,12,0,32" Spacing="4">
-          <TextBlock Text="Universal" FontSize="26" FontWeight="Bold" />
-          <TextBlock Text="Converter" FontSize="26" FontWeight="Bold" />
+          <TextBlock Text="{Binding Text.AppName}" TextWrapping="Wrap" FontSize="26" FontWeight="Bold" />
         </StackPanel>
-        <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedPage}" VerticalAlignment="Top" />
+        <ListBox SelectedIndex="{Binding SelectedPageIndex, Mode=TwoWay}" SelectionMode="AlwaysSelected" VerticalAlignment="Top">
+          <ListBoxItem AutomationProperties.AutomationId="NavDashboard" AutomationProperties.Name="{Binding Text.Dashboard}" Content="{Binding Text.Dashboard}" />
+          <ListBoxItem AutomationProperties.AutomationId="NavConvert" AutomationProperties.Name="{Binding Text.Convert}" Content="{Binding Text.Convert}" />
+          <ListBoxItem AutomationProperties.AutomationId="NavQueue" AutomationProperties.Name="{Binding Text.Queue}" Content="{Binding Text.Queue}" />
+          <ListBoxItem AutomationProperties.AutomationId="NavHistory" AutomationProperties.Name="{Binding Text.History}" Content="{Binding Text.History}" />
+          <ListBoxItem AutomationProperties.AutomationId="NavSettings" AutomationProperties.Name="{Binding Text.Settings}" Content="{Binding Text.Settings}" />
+          <ListBoxItem AutomationProperties.AutomationId="NavAbout" AutomationProperties.Name="{Binding Text.About}" Content="{Binding Text.About}" />
+        </ListBox>
       </DockPanel>
     </Border>
     <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="32,28" RowSpacing="18">
-      <TextBlock Classes="title" Text="{Binding SelectedPage}" />
+      <TextBlock Classes="title" AutomationProperties.AutomationId="PageTitle" Text="{Binding PageTitle}" />
       <Border Grid.Row="1" Classes="panel" Padding="16,10">
-        <TextBlock Classes="secondary" Text="Simulation mode · M0 does not include real conversion engines. No output files are created." />
+        <TextBlock Classes="secondary" AutomationProperties.AutomationId="SimulationBanner" Text="{Binding Text.SimulationBanner}" />
       </Border>
       <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
         <Panel>
           <StackPanel IsVisible="{Binding IsDashboard}" Spacing="16">
             <Border Classes="panel">
               <StackPanel Spacing="12">
-                <TextBlock Text="Try a conversion" FontSize="22" FontWeight="SemiBold" />
-                <TextBlock Classes="secondary" Text="Add PNG, JPG or WebP files to try batch jobs, progress and cancellation." />
-                <Button Classes="accent" Content="Open Convert" Command="{Binding OpenConvertCommand}" />
+                <TextBlock Text="{Binding Text.DashboardHeading}" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Classes="secondary" Text="{Binding Text.DashboardIntro}" />
+                <Button Classes="accent" Content="{Binding Text.OpenConvert}" Command="{Binding OpenConvertCommand}" />
               </StackPanel>
             </Border>
             <TextBlock Text="{Binding QueueSummary}" />
@@ -50,38 +56,38 @@
           <StackPanel IsVisible="{Binding IsConvert}" Spacing="14">
             <Border Classes="panel" Background="Transparent" x:Name="DropZone" DragDrop.AllowDrop="True">
               <StackPanel Spacing="12">
-                <TextBlock Text="Drop image files here" FontSize="20" FontWeight="SemiBold" />
-                <TextBlock Classes="secondary" Text="PNG, JPG and WebP" />
-                <Button Content="Choose files" Click="OnChooseFiles" />
+                <TextBlock Text="{Binding Text.DropTitle}" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Classes="secondary" Text="{Binding Text.SupportedImages}" />
+                <Button AutomationProperties.AutomationId="ChooseFiles" Content="{Binding Text.ChooseFiles}" Click="OnChooseFiles" />
               </StackPanel>
             </Border>
-            <ListBox ItemsSource="{Binding InputFiles}" MaxHeight="180" />
+            <ListBox AutomationProperties.AutomationId="InputFiles" ItemsSource="{Binding InputFiles}" MaxHeight="180" />
             <StackPanel Orientation="Horizontal" Spacing="10">
-              <ComboBox ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}">
+              <ComboBox AutomationProperties.Name="{Binding Text.TargetFormat}" ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="local:TargetOption">
                     <TextBlock Text="{Binding Label}" />
                   </DataTemplate>
                 </ComboBox.ItemTemplate>
               </ComboBox>
-              <Button Classes="accent" Content="Queue simulation" Command="{Binding QueueSimulationCommand}" />
-              <Button Content="Clear files" Command="{Binding ClearFilesCommand}" />
+              <Button Classes="accent" AutomationProperties.AutomationId="QueueSimulation" Content="{Binding Text.QueueSimulation}" Command="{Binding QueueSimulationCommand}" />
+              <Button Content="{Binding Text.ClearFiles}" Command="{Binding ClearFilesCommand}" />
             </StackPanel>
             <TextBlock Classes="secondary" Text="{Binding InputMessage}" />
           </StackPanel>
           <StackPanel IsVisible="{Binding IsQueue}" Spacing="12">
             <TextBlock Classes="secondary" Text="{Binding QueueSummary}" />
-            <ItemsControl ItemsSource="{Binding ActiveJobs}">
+            <ItemsControl AutomationProperties.AutomationId="ActiveJobs" ItemsSource="{Binding ActiveJobs}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="local:JobRow">
                   <Border Classes="panel" Margin="0,0,0,8">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                       <StackPanel Spacing="6">
                         <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Classes="secondary" Text="{Binding Status}" />
+                        <TextBlock Classes="secondary" AutomationProperties.AutomationId="JobStatus" Text="{Binding Status}" />
                         <ProgressBar Minimum="0" Maximum="100" Value="{Binding Percent}" />
                       </StackPanel>
-                      <Button Grid.Column="1" Content="Cancel" Command="{Binding Cancel}" />
+                      <Button Grid.Column="1" Content="{Binding CancelLabel}" Command="{Binding Cancel}" />
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -89,8 +95,8 @@
             </ItemsControl>
           </StackPanel>
           <StackPanel IsVisible="{Binding IsHistory}" Spacing="12">
-            <TextBlock Classes="secondary" Text="Results from this session." />
-            <ItemsControl ItemsSource="{Binding FinishedJobs}">
+            <TextBlock Classes="secondary" Text="{Binding Text.HistoryNote}" />
+            <ItemsControl AutomationProperties.AutomationId="FinishedJobs" ItemsSource="{Binding FinishedJobs}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="local:JobRow">
                   <Border Classes="panel" Margin="0,0,0,8">
@@ -104,14 +110,33 @@
             </ItemsControl>
           </StackPanel>
           <StackPanel IsVisible="{Binding IsSettings}" Spacing="10">
-            <TextBlock Text="Appearance" FontSize="20" FontWeight="SemiBold" />
-            <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" />
-            <Button Content="Save theme" Command="{Binding SaveThemeCommand}" />
-            <TextBlock Classes="secondary" Text="{Binding SettingsMessage}" />
+            <TextBlock Classes="secondary" Text="{Binding SettingsLoadMessage}" />
+            <TextBlock Text="{Binding Text.Language}" FontSize="20" FontWeight="SemiBold" />
+            <ListBox AutomationProperties.AutomationId="LanguagePicker" AutomationProperties.Name="{Binding Text.Language}"
+                     SelectedIndex="{Binding LanguageIndex, Mode=TwoWay}" SelectionMode="AlwaysSelected"
+                     HorizontalAlignment="Left" IsEnabled="{Binding PreferencesLoaded}">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBoxItem AutomationProperties.AutomationId="LanguageEnglish" AutomationProperties.Name="{Binding Text.EnglishName}" Content="{Binding Text.EnglishName}" />
+              <ListBoxItem AutomationProperties.AutomationId="LanguageTurkish" AutomationProperties.Name="{Binding Text.TurkishName}" Content="{Binding Text.TurkishName}" />
+            </ListBox>
+            <TextBlock Classes="secondary" AutomationProperties.AutomationId="LanguageMessage" Text="{Binding LanguageMessage}" />
+            <TextBlock Text="{Binding Text.Appearance}" FontSize="20" FontWeight="SemiBold" />
+            <ComboBox AutomationProperties.Name="{Binding Text.Appearance}" SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}"
+                      IsEnabled="{Binding PreferencesLoaded}">
+              <ComboBoxItem Content="{Binding Text.ThemeSystem}" />
+              <ComboBoxItem Content="{Binding Text.ThemeLight}" />
+              <ComboBoxItem Content="{Binding Text.ThemeDark}" />
+            </ComboBox>
+            <Button Content="{Binding Text.SaveTheme}" Command="{Binding SaveThemeCommand}" IsEnabled="{Binding PreferencesLoaded}" />
+            <TextBlock Classes="secondary" Text="{Binding ThemeMessage}" />
           </StackPanel>
           <StackPanel IsVisible="{Binding IsAbout}" Spacing="10">
-            <TextBlock Text="Universal Converter · M0" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock Classes="secondary" Text="Offline desktop file conversion. Licensed under GPL-3.0-or-later." />
+            <TextBlock Text="{Binding Text.AppName}" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Classes="secondary" Text="{Binding Text.AboutDescription}" />
             <TextBlock Classes="secondary" Text="{Binding Platform}" />
           </StackPanel>
         </Panel>

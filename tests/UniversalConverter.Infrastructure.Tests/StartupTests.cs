@@ -75,8 +75,9 @@ public sealed class StartupTests
         var ex = Assert.Throws<PolicyBlockException>(ThrowPolicyBlock);
         Assert.True(StartupChecks.IsAppControlBlock(new TypeInitializationException("test", ex)));
         Assert.False(StartupChecks.IsAppControlBlock(new FileLoadException()));
-        Assert.Contains("Windows Application Control", StartupChecks.DescribeFailure(ex));
-        Assert.Contains("dependency", StartupChecks.DescribeFailure(new DllNotFoundException()));
+        var text = new UiText(UiText.English);
+        Assert.Contains("Windows Application Control", StartupChecks.DescribeFailure(ex, text));
+        Assert.Contains("dependency", StartupChecks.DescribeFailure(new DllNotFoundException(), text));
         log.Exception("fatal", ex);
         var contents = File.ReadAllText(log.LogPath!);
         Assert.Contains("0x800711C7", contents);

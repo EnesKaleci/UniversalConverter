@@ -126,19 +126,19 @@ internal static class StartupChecks
         return false;
     }
 
-    public static string DescribeFailure(Exception exception)
+    public static string DescribeFailure(Exception exception, UiText text)
     {
         if (IsAppControlBlock(exception))
-            return "Windows Application Control blocked a file (0x800711C7). Review CodeIntegrity / Operational for the file and policy.";
+            return text.Get("PolicyBlock");
 
         for (Exception? current = exception; current is not null; current = current.InnerException)
         {
             if (current is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
-                return "A dependency could not load or is incompatible. Check the package files and Windows architecture.";
+                return text.Get("NativeDependencyFailure");
             if (current is FileLoadException or FileNotFoundException)
-                return "A required file could not load. Check that the complete ZIP was extracted.";
+                return text.Get("RequiredFileFailure");
         }
-        return $"The operation failed ({exception.GetType().Name}, 0x{exception.HResult:X8}).";
+        return text.Format("OperationFailure", exception.GetType().Name, $"0x{exception.HResult:X8}");
     }
 
     public static IReadOnlyList<string> MissingFiles(string directory, IEnumerable<string> expectedFiles) =>

@@ -33,4 +33,6 @@ public interface ISettingsStore
 {
     Task<ThemePreference> LoadThemeAsync(CancellationToken cancellationToken = default);
     Task SaveThemeAsync(ThemePreference theme, CancellationToken cancellationToken = default);
+    Task<string?> LoadLanguageAsync(CancellationToken cancellationToken = default);
+    Task SaveLanguageAsync(string languageTag, CancellationToken cancellationToken = default);
 }

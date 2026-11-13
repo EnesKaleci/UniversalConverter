@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="AppName" xml:space="preserve"><value>Universal Converter</value></data>
+  <data name="Dashboard" xml:space="preserve"><value>Genel Bakış</value></data>
+  <data name="Convert" xml:space="preserve"><value>Dönüştür</value></data>
+  <data name="Queue" xml:space="preserve"><value>Kuyruk</value></data>
+  <data name="History" xml:space="preserve"><value>Geçmiş</value></data>
+  <data name="Settings" xml:space="preserve"><value>Ayarlar</value></data>
+  <data name="About" xml:space="preserve"><value>Hakkında</value></data>
+  <data name="SimulationBanner" xml:space="preserve"><value>Simülasyon modu. İşlemler çıktı dosyası oluşturmaz.</value></data>
+  <data name="DashboardHeading" xml:space="preserve"><value>Dönüştürmeyi dene</value></data>
+  <data name="DashboardIntro" xml:space="preserve"><value>Toplu işlem, ilerleme ve iptal özelliklerini denemek için PNG, JPG veya WebP dosyaları ekle.</value></data>
+  <data name="OpenConvert" xml:space="preserve"><value>Dönüştür ekranını aç</value></data>
+  <data name="DropTitle" xml:space="preserve"><value>Görsel dosyalarını buraya bırak</value></data>
+  <data name="SupportedImages" xml:space="preserve"><value>PNG, JPG ve WebP</value></data>
+  <data name="ChooseFiles" xml:space="preserve"><value>Dosya seç</value></data>
+  <data name="PickerTitle" xml:space="preserve"><value>Görselleri seç</value></data>
+  <data name="PickerFilter" xml:space="preserve"><value>Simülasyonda desteklenen görseller</value></data>
+  <data name="TargetFormat" xml:space="preserve"><value>Hedef biçim</value></data>
+  <data name="QueueSimulation" xml:space="preserve"><value>Simülasyonu kuyruğa ekle</value></data>
+  <data name="ClearFiles" xml:space="preserve"><value>Dosyaları temizle</value></data>
+  <data name="QueueSummary" xml:space="preserve"><value>{0:N0} etkin · {1:N0} sonuçlandı</value></data>
+  <data name="CancelJob" xml:space="preserve"><value>İptal et</value></data>
+  <data name="JobQueued" xml:space="preserve"><value>Kuyrukta</value></data>
+  <data name="JobRunning" xml:space="preserve"><value>İşleniyor</value></data>
+  <data name="JobCompleted" xml:space="preserve"><value>Simülasyon tamamlandı · Dosya oluşturulmadı</value></data>
+  <data name="JobFailed" xml:space="preserve"><value>Dönüştürme başarısız oldu.</value></data>
+  <data name="JobCancelled" xml:space="preserve"><value>İptal edildi</value></data>
+  <data name="HistoryNote" xml:space="preserve"><value>Bu oturumun sonuçları.</value></data>
+  <data name="Language" xml:space="preserve"><value>Dil</value></data>
+  <data name="EnglishName" xml:space="preserve"><value>English</value></data>
+  <data name="TurkishName" xml:space="preserve"><value>Türkçe</value></data>
+  <data name="LanguageSaving" xml:space="preserve"><value>Dil tercihi kaydediliyor…</value></data>
+  <data name="LanguageSaved" xml:space="preserve"><value>Dil tercihi kaydedildi.</value></data>
+  <data name="LanguageSaveError" xml:space="preserve"><value>Dil tercihi kaydedilemedi. Bu oturumda seçilen dil kullanılacak.</value></data>
+  <data name="Appearance" xml:space="preserve"><value>Görünüm</value></data>
+  <data name="ThemeSystem" xml:space="preserve"><value>Sistem</value></data>
+  <data name="ThemeLight" xml:space="preserve"><value>Açık</value></data>
+  <data name="ThemeDark" xml:space="preserve"><value>Koyu</value></data>
+  <data name="SaveTheme" xml:space="preserve"><value>Temayı kaydet</value></data>
+  <data name="ThemeSaved" xml:space="preserve"><value>Tema kaydedildi.</value></data>
+  <data name="ThemeSaveError" xml:space="preserve"><value>Tema kaydedilemedi.</value></data>
+  <data name="SettingsLoadError" xml:space="preserve"><value>Tercihler yüklenemedi. Varsayılan ayarlar etkin.</value></data>
+  <data name="AboutDescription" xml:space="preserve"><value>Çevrimdışı masaüstü dosya dönüştürücüsü. GPL-3.0-or-later lisansıyla sunulur.</value></data>
+  <data name="PlatformLabel" xml:space="preserve"><value>İşletim sistemi: {0}</value></data>
+  <data name="UnknownPlatform" xml:space="preserve"><value>Bilinmiyor</value></data>
+  <data name="SkippedFiles" xml:space="preserve"><value>Desteklenmeyen, yinelenen veya sınırı aşan {0:N0} dosya atlandı.</value></data>
+  <data name="PickerFailure" xml:space="preserve"><value>Dosya seçici açılamadı.</value></data>
+  <data name="ChooseInputAndTarget" xml:space="preserve"><value>En az bir dosya ve bir hedef biçim seç.</value></data>
+  <data name="QueueAccepted" xml:space="preserve"><value>{0:N0} simülasyon kuyruğa eklendi.</value></data>
+  <data name="QueuePartiallyAccepted" xml:space="preserve"><value>{0:N0} iş kuyruğa eklendi. {1:N0} iş atlandı. {2}</value></data>
+  <data name="InputMissing" xml:space="preserve"><value>Girdi dosyası bulunamadı.</value></data>
+  <data name="PairUnsupported" xml:space="preserve"><value>Bu kaynak ve hedef biçim çifti desteklenmiyor.</value></data>
+  <data name="InvalidRequest" xml:space="preserve"><value>Dosya yolu veya dönüştürme isteği geçersiz.</value></data>
+  <data name="InputAccessError" xml:space="preserve"><value>Girdi dosyasına erişilemedi.</value></data>
+  <data name="QueueUnavailable" xml:space="preserve"><value>Kuyruk dolu veya şu anda kullanılamıyor.</value></data>
+  <data name="StartupFailure" xml:space="preserve"><value>Universal Converter başlatılamadı.</value></data>
+  <data name="PolicyBlock" xml:space="preserve"><value>Windows Uygulama Denetimi bir dosyayı engelledi (0x800711C7). Dosya ve ilke bilgisi için CodeIntegrity / Operational günlüğüne bak.</value></data>
+  <data name="NativeDependencyFailure" xml:space="preserve"><value>Bir bağımlılık yüklenemedi veya uyumsuz. Paket dosyalarını ve Windows mimarisini kontrol et.</value></data>
+  <data name="RequiredFileFailure" xml:space="preserve"><value>Gerekli bir dosya yüklenemedi. ZIP içeriğinin tamamını çıkardığından emin ol.</value></data>
+  <data name="OperationFailure" xml:space="preserve"><value>İşlem başarısız oldu ({0}, {1}).</value></data>
+  <data name="LogLocation" xml:space="preserve"><value>Günlük: {0}</value></data>
+  <data name="LogUnavailable" xml:space="preserve"><value>kullanılamıyor</value></data>
+  <data name="MissingPackageFile" xml:space="preserve"><value>Paket dosyası eksik: {0}. ZIP içeriğinin tamamını çıkar.</value></data>
+  <data name="DiagnosticSkia" xml:space="preserve"><value>Skia yerel kitaplığı</value></data>
+  <data name="DiagnosticHarfBuzz" xml:space="preserve"><value>HarfBuzz yerel kitaplığı</value></data>
+  <data name="DiagnosticSqlite" xml:space="preserve"><value>SQLite ayarları</value></data>
+  <data name="DiagnosticCheckPassed" xml:space="preserve"><value>{0}: Başarılı</value></data>
+  <data name="DiagnosticCheckFailed" xml:space="preserve"><value>{0}: Başarısız. {1}</value></data>
+  <data name="DiagnosticsPassed" xml:space="preserve"><value>Tanılama başarılı.</value></data>
+  <data name="DiagnosticsFailed" xml:space="preserve"><value>Tanılama başarısız.</value></data>
+  <data name="TextUnavailable" xml:space="preserve"><value>Metin kullanılamıyor.</value></data>
+</root>
