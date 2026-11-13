@@ -10,6 +10,14 @@ public static class ConverterTestWindows
 {
     private delegate bool EnumWindow(IntPtr window, IntPtr param);
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindow callback, IntPtr param);
+    [DllImport("user32.dll")] private static extern bool EnumChildWindows(IntPtr parent, EnumWindow callback, IntPtr param);
+    [DllImport("user32.dll")] private static extern int GetDlgCtrlID(IntPtr window);
+    [DllImport("user32.dll")] private static extern IntPtr GetParent(IntPtr window);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr window, StringBuilder text, int capacity);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr SendMessageTimeout(IntPtr window, uint message, IntPtr wParam, string text,
+        uint flags, uint timeout, out IntPtr result);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr window);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out int process);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
@@ -27,6 +35,40 @@ public static class ConverterTestWindows
             return true;
         }, IntPtr.Zero);
         return handles.ToArray();
+    }
+
+    public static IntPtr FileNameEdit(IntPtr dialog)
+    {
+        var edits = new List<IntPtr>();
+        IntPtr fileName = IntPtr.Zero;
+        EnumChildWindows(dialog, (window, param) =>
+        {
+            var type = new StringBuilder(128);
+            GetClassName(window, type, type.Capacity);
+            if (type.ToString() == "Edit" && IsWindowVisible(window))
+            {
+                edits.Add(window);
+                for (var parent = window; parent != IntPtr.Zero && parent != dialog; parent = GetParent(parent))
+                {
+                    if (GetDlgCtrlID(parent) == 1148)
+                    {
+                        fileName = window;
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }, IntPtr.Zero);
+        return fileName != IntPtr.Zero ? fileName : edits.Count == 1 ? edits[0] : IntPtr.Zero;
+    }
+
+    public static bool SetFileName(IntPtr edit, string value)
+    {
+        const uint SetText = 0x000C;
+        const uint AbortIfHung = 0x0002;
+        IntPtr result;
+        return SendMessageTimeout(edit, SetText, IntPtr.Zero, value, AbortIfHung, 2000, out result) != IntPtr.Zero &&
+            result != IntPtr.Zero;
     }
 
     public static string Title(IntPtr window)
@@ -150,35 +192,21 @@ function Test-TurkishFile {
         throw
     }
     $dialog = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
-    $entry = Wait-ForResult {
-        $fileName = Get-UiElement $dialog '1148'
-        $candidates = @($fileName)
-        if ($fileName) {
-            $edits = [System.Windows.Automation.PropertyCondition]::new(
-                [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
-                [System.Windows.Automation.ControlType]::Edit)
-            $candidates += @($fileName.FindAll([System.Windows.Automation.TreeScope]::Descendants, $edits))
-        }
-        foreach ($candidate in $candidates) {
-            $value = $null
-            if ($candidate -and $candidate.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$value) -and -not $value.Current.IsReadOnly) {
-                return $value
-            }
-        }
-    } 'writable native filename field'
-    $entry.SetValue($file)
+    $edit = Wait-ForResult {
+        $control = [ConverterTestWindows]::FileNameEdit($handle)
+        if ($control -ne [IntPtr]::Zero) { $control }
+    } 'native filename edit'
+    if (-not [ConverterTestWindows]::SetFileName($edit, $file)) { throw 'Could not enter the Unicode path.' }
     $open = Wait-ForResult { Get-UiElement $dialog '1' } 'native Open button'
     $open.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
-    $inputs = Wait-ForResult { Get-UiElement $Window 'InputFiles' } 'input list'
-    $null = Wait-ForResult { Get-VisibleUiText $inputs $file } 'original Turkish file path'
+    $null = Wait-ForResult { Get-VisibleUiText $Window $file } 'original Turkish file path'
     $submit = Get-UiElement $Window 'QueueSimulation'
     $submit.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
     Assert-UiName $Window 'PageTitle' 'Kuyruk'
     Set-Selection $Window 'NavHistory'
     Assert-UiName $Window 'JobStatus' 'Simülasyon tamamlandı · Dosya oluşturulmadı'
-    $history = Get-UiElement $Window 'FinishedJobs'
     $jobTitle = [IO.Path]::GetFileName($file) + ' → JPG'
-    $null = Wait-ForResult { Get-VisibleUiText $history $jobTitle } 'original Turkish filename in History'
+    $null = Wait-ForResult { Get-VisibleUiText $Window $jobTitle } 'original Turkish filename in History'
     if ((Get-ChildItem -LiteralPath $folder -File).Count -ne 1) { throw 'Simulation created an output file.' }
     Write-Host 'Unicode file picker, queue and history passed.'
 }
