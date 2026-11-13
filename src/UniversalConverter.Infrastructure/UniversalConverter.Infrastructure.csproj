@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../UniversalConverter.Application/UniversalConverter.Application.csproj" />
+    <ProjectReference Include="../UniversalConverter.Contracts/UniversalConverter.Contracts.csproj" />
+    <ProjectReference Include="../UniversalConverter.Domain/UniversalConverter.Domain.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+</Project>

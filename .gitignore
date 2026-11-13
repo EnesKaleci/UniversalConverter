@@ -147,3 +147,11 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# .NET
+**/[Bb]in/
+**/[Oo]bj/
+.vs/
+TestResults/
+artifacts/
+*.user

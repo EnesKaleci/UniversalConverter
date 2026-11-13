@@ -1,0 +1,121 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:UniversalConverter.Desktop"
+        x:Class="UniversalConverter.Desktop.MainWindow"
+        x:DataType="local:MainWindowViewModel"
+        Title="Universal Converter" Width="1060" Height="700" MinWidth="740" MinHeight="540">
+  <Window.Styles>
+    <Style Selector="TextBlock.title">
+      <Setter Property="FontSize" Value="34" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.secondary">
+      <Setter Property="Opacity" Value="0.75" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="Border.panel">
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="20" />
+    </Style>
+  </Window.Styles>
+  <Grid ColumnDefinitions="212,*">
+    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" Padding="18">
+      <DockPanel LastChildFill="True">
+        <StackPanel DockPanel.Dock="Top" Margin="8,12,0,32" Spacing="4">
+          <TextBlock Text="Universal" FontSize="26" FontWeight="Bold" />
+          <TextBlock Text="Converter" FontSize="26" FontWeight="Bold" />
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedPage}" VerticalAlignment="Top" />
+      </DockPanel>
+    </Border>
+    <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="32,28" RowSpacing="18">
+      <TextBlock Classes="title" Text="{Binding SelectedPage}" />
+      <Border Grid.Row="1" Classes="panel" Padding="16,10">
+        <TextBlock Classes="secondary" Text="Simulation mode · M0 does not include real conversion engines. No output files are created." />
+      </Border>
+      <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+        <Panel>
+          <StackPanel IsVisible="{Binding IsDashboard}" Spacing="16">
+            <Border Classes="panel">
+              <StackPanel Spacing="12">
+                <TextBlock Text="Try a conversion" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Classes="secondary" Text="Add PNG, JPG or WebP files to try batch jobs, progress and cancellation." />
+                <Button Classes="accent" Content="Open Convert" Command="{Binding OpenConvertCommand}" />
+              </StackPanel>
+            </Border>
+            <TextBlock Text="{Binding QueueSummary}" />
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsConvert}" Spacing="14">
+            <Border Classes="panel" Background="Transparent" x:Name="DropZone" DragDrop.AllowDrop="True">
+              <StackPanel Spacing="12">
+                <TextBlock Text="Drop image files here" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Classes="secondary" Text="PNG, JPG and WebP" />
+                <Button Content="Choose files" Click="OnChooseFiles" />
+              </StackPanel>
+            </Border>
+            <ListBox ItemsSource="{Binding InputFiles}" MaxHeight="180" />
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <ComboBox ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="local:TargetOption">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <Button Classes="accent" Content="Queue simulation" Command="{Binding QueueSimulationCommand}" />
+              <Button Content="Clear files" Command="{Binding ClearFilesCommand}" />
+            </StackPanel>
+            <TextBlock Classes="secondary" Text="{Binding InputMessage}" />
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsQueue}" Spacing="12">
+            <TextBlock Classes="secondary" Text="{Binding QueueSummary}" />
+            <ItemsControl ItemsSource="{Binding ActiveJobs}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="local:JobRow">
+                  <Border Classes="panel" Margin="0,0,0,8">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                      <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="secondary" Text="{Binding Status}" />
+                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding Percent}" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="Cancel" Command="{Binding Cancel}" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsHistory}" Spacing="12">
+            <TextBlock Classes="secondary" Text="Results from this session." />
+            <ItemsControl ItemsSource="{Binding FinishedJobs}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="local:JobRow">
+                  <Border Classes="panel" Margin="0,0,0,8">
+                    <StackPanel Spacing="6">
+                      <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="secondary" Text="{Binding Status}" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsSettings}" Spacing="10">
+            <TextBlock Text="Appearance" FontSize="20" FontWeight="SemiBold" />
+            <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" />
+            <Button Content="Save theme" Command="{Binding SaveThemeCommand}" />
+            <TextBlock Classes="secondary" Text="{Binding SettingsMessage}" />
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsAbout}" Spacing="10">
+            <TextBlock Text="Universal Converter · M0" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Classes="secondary" Text="Offline desktop file conversion. Licensed under GPL-3.0-or-later." />
+            <TextBlock Classes="secondary" Text="{Binding Platform}" />
+          </StackPanel>
+        </Panel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</Window>

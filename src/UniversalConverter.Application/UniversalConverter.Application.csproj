@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../UniversalConverter.Domain/UniversalConverter.Domain.csproj" />
+    <ProjectReference Include="../UniversalConverter.Contracts/UniversalConverter.Contracts.csproj" />
+  </ItemGroup>
+</Project>

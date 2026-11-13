@@ -1,0 +1,81 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      CONVERTER_DATA_DIRECTORY: ${{ runner.temp }}/UniversalConverterSmoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore UniversalConverter.slnx
+      - name: Build
+        run: dotnet build UniversalConverter.slnx -c Release --no-restore
+      - name: Test
+        run: dotnet test UniversalConverter.slnx -c Release --no-build --logger trx --results-directory artifacts/test-results
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-xUnit-results
+          path: artifacts/test-results/*.trx
+          if-no-files-found: ignore
+      - name: Publish Windows x64 self-contained
+        run: >
+          dotnet publish src/UniversalConverter.Desktop -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=false -p:PublishTrimmed=false -o artifacts/publish
+      - name: Smoke test published Windows window
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path artifacts/publish/UniversalConverter.Desktop.exe).Path
+          $process = [System.Diagnostics.Process]::Start($exe)
+          try {
+            $deadline = [DateTime]::UtcNow.AddSeconds(25)
+            do {
+              Start-Sleep -Milliseconds 250
+              $process.Refresh()
+              if ($process.HasExited) { throw "Application exited before opening a window ($($process.ExitCode))." }
+            } while ($process.MainWindowHandle -eq [IntPtr]::Zero -and [DateTime]::UtcNow -lt $deadline)
+            if ($process.MainWindowHandle -eq [IntPtr]::Zero) { throw 'Main window did not appear.' }
+            if ($process.MainWindowTitle -ne 'Universal Converter') { throw "Unexpected window title: $($process.MainWindowTitle)" }
+            $database = Join-Path $env:CONVERTER_DATA_DIRECTORY "settings.db"
+            while (-not (Test-Path $database) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 250 }
+            if (-not (Test-Path $database)) { throw "Settings database was not initialized." }
+            if (-not $process.CloseMainWindow()) { throw 'Could not request a graceful window close.' }
+            if (-not $process.WaitForExit(10000)) { throw 'Application did not shut down.' }
+            if ($process.ExitCode -ne 0) { throw "Application exited with code $($process.ExitCode)." }
+          } finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+            $process.Dispose()
+          }
+      - name: Create portable ZIP with corresponding project source
+        shell: pwsh
+        run: |
+          Copy-Item LICENSE, README.md artifacts/publish/
+          Copy-Item docs/legal artifacts/publish/legal -Recurse
+          git archive --format=zip --output=artifacts/publish/UniversalConverter-source.zip HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Could not archive corresponding source.' }
+          Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/UniversalConverter-M0-Windows-x64.zip
+          Get-FileHash -Algorithm SHA256 artifacts/UniversalConverter-M0-Windows-x64.zip
+      - name: Upload Windows portable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: UniversalConverter-M0-Windows-x64
+          path: artifacts/UniversalConverter-M0-Windows-x64.zip
+          if-no-files-found: error
