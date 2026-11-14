@@ -80,6 +80,8 @@
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
+            <Button Content="{Binding Text.MediaInspect}" Click="OnInspectMedia" IsEnabled="{Binding CanEditFiles}" IsVisible="{Binding HasFiles}" />
+            <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding MediaInfo}" />
             <WrapPanel ItemSpacing="8" LineSpacing="8" IsEnabled="{Binding CanEditFiles}" IsVisible="{Binding HasFiles}">
               <Button x:Name="RemoveSelectedButton" IsEnabled="False" AutomationProperties.AutomationId="RemoveSelected" Content="{Binding Text.RemoveSelected}" Click="OnRemoveSelected" />
               <Button AutomationProperties.AutomationId="ClearFiles" Content="{Binding Text.ClearFiles}" Click="OnClearFiles" />

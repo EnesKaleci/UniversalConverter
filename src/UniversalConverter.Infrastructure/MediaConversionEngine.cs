@@ -165,7 +165,25 @@ public sealed class MediaConversionEngine(string toolsDirectory) : IOutputCommit
         }
     }
 
-    private sealed record Metadata(string? Video, int? VideoIndex, string? Audio, int? AudioIndex, double? Duration);
+    public sealed record Metadata(string? Video, int? VideoIndex, string? Audio, int? AudioIndex, double? Duration,
+        string? Container, int? Width, int? Height, string? FrameRate, long? Bitrate, int? Channels, string? SampleRate);
+
+    public async Task<Metadata> InspectAsync(string path, FileFormat format, CancellationToken token)
+    {
+        using var input = OpenSource(path);
+        var tools = await OpenToolsAsync(token).ConfigureAwait(false);
+        using var encoder = tools.Encoder;
+        using var probe = tools.Probe;
+        return await ProbeAsync(new SafeProcessRunner([probe.Name]), probe.Name, path,
+            MediaFormats.Find(format) ?? throw new ConversionException(ConversionFailure.InvalidMedia), token).ConfigureAwait(false);
+    }
+
+    private static int? Number(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.TryGetInt32(out var number) ? number : null;
+
+    private static string? Label(JsonElement element, string property) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out var value) &&
+        value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 
     private async Task<Metadata> ProbeAsync(ISafeProcessRunner runner, string probe, string path, MediaFormat format,
         CancellationToken token)
@@ -174,7 +192,7 @@ public sealed class MediaConversionEngine(string toolsDirectory) : IOutputCommit
         {
             var result = await runner.RunAsync(new(probe,
                 ["-v", "error", "-protocol_whitelist", "file", "-f", format.Demuxer,
-                    "-show_entries", "stream=index,codec_type,codec_name:stream_disposition=attached_pic:format=duration,format_name",
+                    "-show_entries", "stream=index,codec_type,codec_name,width,height,avg_frame_rate,sample_rate,channels:stream_disposition=attached_pic:format=duration,format_name,bit_rate",
                     "-of", "json", "-i", path], toolsDirectory, TimeSpan.FromSeconds(30),
                 RejectTruncatedOutput: true), token).ConfigureAwait(false);
             if (result.ExitCode != 0)
@@ -183,7 +201,8 @@ public sealed class MediaConversionEngine(string toolsDirectory) : IOutputCommit
             using var json = JsonDocument.Parse(result.StandardOutput);
             var root = json.RootElement;
             string? video = null, audio = null;
-            int? videoIndex = null, audioIndex = null;
+            int? videoIndex = null, audioIndex = null, width = null, height = null, channels = null;
+            string? frameRate = null, sampleRate = null;
             foreach (var stream in root.GetProperty("streams").EnumerateArray())
             {
                 if (!stream.TryGetProperty("codec_name", out var codec) || !stream.TryGetProperty("index", out var index))
@@ -195,11 +214,16 @@ public sealed class MediaConversionEngine(string toolsDirectory) : IOutputCommit
                 {
                     video = codec.GetString();
                     videoIndex = index.GetInt32();
+                    width = Number(stream, "width");
+                    height = Number(stream, "height");
+                    frameRate = Label(stream, "avg_frame_rate");
                 }
                 if (type == "audio" && audio is null)
                 {
                     audio = codec.GetString();
                     audioIndex = index.GetInt32();
+                    channels = Number(stream, "channels");
+                    sampleRate = Label(stream, "sample_rate");
                 }
             }
             double? duration = root.TryGetProperty("format", out var info) &&
@@ -208,7 +232,9 @@ public sealed class MediaConversionEngine(string toolsDirectory) : IOutputCommit
                 double.IsFinite(seconds) && seconds > 0 ? seconds : null;
             if (video is null && audio is null)
                 throw new ConversionException(ConversionFailure.InvalidMedia);
-            return new(video, videoIndex, audio, audioIndex, duration);
+            long? bitrate = long.TryParse(Label(info, "bit_rate"), CultureInfo.InvariantCulture, out var rate) ? rate : null;
+            return new(video, videoIndex, audio, audioIndex, duration, Label(info, "format_name"), width, height,
+                frameRate, bitrate, channels, sampleRate);
         }
         catch (TimeoutException error) { throw new ConversionException(ConversionFailure.MediaTimedOut, error); }
         catch (Win32Exception error) { throw new ConversionException(ConversionFailure.MediaToolsMissing, error); }

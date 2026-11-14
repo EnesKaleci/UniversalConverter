@@ -146,4 +146,6 @@
   <data name="ImageErrorMediaTimedOut" xml:space="preserve"><value>The media operation timed out.</value></data>
   <data name="ImageErrorMediaEncoderUnavailable" xml:space="preserve"><value>The configured FFmpeg build lacks the requested encoder.</value></data>
   <data name="MediaCompleted" xml:space="preserve"><value>Media converted</value></data>
+  <data name="MediaInspect" xml:space="preserve"><value>Inspect selected media</value></data>
+  <data name="MediaInfo" xml:space="preserve"><value>Container {0} · Video {1} · Audio {2} · {3} s · {4} · {5} fps · {6} kbps · {7} ch · {8} Hz</value></data>
 </root>

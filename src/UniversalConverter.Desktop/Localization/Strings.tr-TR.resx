@@ -146,4 +146,6 @@
   <data name="ImageErrorMediaTimedOut" xml:space="preserve"><value>Medya işlemi zaman aşımına uğradı.</value></data>
   <data name="ImageErrorMediaEncoderUnavailable" xml:space="preserve"><value>Yapılandırılan FFmpeg derlemesinde istenen kodlayıcı yok.</value></data>
   <data name="MediaCompleted" xml:space="preserve"><value>Medya dönüştürüldü</value></data>
+  <data name="MediaInspect" xml:space="preserve"><value>Seçili medyayı incele</value></data>
+  <data name="MediaInfo" xml:space="preserve"><value>Kapsayıcı {0} · Video {1} · Ses {2} · {3} s · {4} · {5} fps · {6} kbps · {7} ch · {8} Hz</value></data>
 </root>

@@ -91,6 +91,12 @@ public partial class MainWindow : Window
         finally { _pickerOpen = false; }
     }
 
+    private async void OnInspectMedia(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel && InputList.SelectedItem is FileRow row)
+            await viewModel.InspectMediaAsync(row);
+    }
+
     private void OnFileSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (RemoveSelectedButton is not null)

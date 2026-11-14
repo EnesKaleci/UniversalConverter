@@ -86,6 +86,8 @@ public sealed class UiText
     public string MediaSource => Get(nameof(MediaSource));
     public string MediaQualityNote => Get(nameof(MediaQualityNote));
 
+    public string MediaInspect => Get(nameof(MediaInspect));
+
     internal string Get(string key) =>
         Read(key, Culture) ?? Read(key, CultureInfo.InvariantCulture) ??
         Read("TextUnavailable", CultureInfo.InvariantCulture) ?? "Text unavailable.";

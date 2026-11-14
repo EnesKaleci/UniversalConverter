@@ -30,6 +30,35 @@ public partial class MainWindowViewModel
     public bool CanConvertFiles => CanEditFiles && _proposals.Any(proposal =>
         proposal.Path is not null || proposal.Issue == OutputIssue.Conflict);
     public bool ShowsQuality => SelectedTarget is { } target && target.Format.Category == FormatCategory.Image && target.Format != ImageFormats.Png;
+    internal UniversalConverter.Infrastructure.MediaConversionEngine? MediaEngine { get; init; }
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private UniversalConverter.Infrastructure.MediaConversionEngine.Metadata? _selectedMedia;
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string? _mediaProbeError;
+
+    internal async Task InspectMediaAsync(FileRow? row)
+    {
+        SelectedMedia = null;
+        MediaProbeError = null;
+        if (row is null || MediaEngine is null || MediaFormats.Find(row.File.Format) is null)
+            return;
+        await RunFileOperationAsync(async token =>
+        {
+            try { SelectedMedia = await MediaEngine.InspectAsync(row.Path, row.File.Format, token); }
+            catch (ConversionException error) { MediaProbeError = "ImageError" + error.Reason; }
+        });
+    }
+
+    public string MediaInfo => SelectedMedia is { } info
+        ? Text.Format("MediaInfo", info.Container ?? "—", info.Video ?? "—", info.Audio ?? "—",
+            info.Duration is { } duration ? duration.ToString("0.##", Text.Culture) : "—",
+            info.Width is { } width ? $"{width}×{info.Height}" : "—", info.FrameRate ?? "—",
+            info.Bitrate is { } bitrate ? (bitrate / 1000).ToString(Text.Culture) : "—",
+            info.Channels?.ToString(Text.Culture) ?? "—", info.SampleRate ?? "—")
+        : MediaProbeError is { } error ? Text.Get(error) : "";
+
+    partial void OnSelectedMediaChanged(UniversalConverter.Infrastructure.MediaConversionEngine.Metadata? value) =>
+        OnPropertyChanged(nameof(MediaInfo));
+    partial void OnMediaProbeErrorChanged(string? value) => OnPropertyChanged(nameof(MediaInfo));
+
     public bool ShowsMediaOptions => SelectedTarget is { } choice && MediaFormats.Find(choice.Format) is not null;
     public bool ShowsVideoOptions => SelectedTarget is { } choice && MediaFormats.Find(choice.Format)?.IsVideo == true;
     public string TargetCodecs => SelectedTarget is { } choice && MediaFormats.Find(choice.Format) is { } media
@@ -277,6 +306,7 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(ShowsVideoOptions));
         OnPropertyChanged(nameof(ShowsCustomBitrate));
         OnPropertyChanged(nameof(TargetCodecs));
+        OnPropertyChanged(nameof(MediaInfo));
         OnPropertyChanged(nameof(ShowsJpegWarning));
         OnPropertyChanged(nameof(HasFiles));
         OnPropertyChanged(nameof(HasCustomFolder));
