@@ -82,6 +82,14 @@ jobs:
         run: |
           if ((dotnet --version) -ne $env:RELEASE_DOTNET_SDK) { throw 'Unexpected release SDK.' }
           dotnet restore UniversalConverter.slnx -p:WindowsReleaseProfile=true
+      - name: Install pinned test tools for media integration
+        if: github.ref_name == 'codex/m3-audio-video-conversion'
+        shell: pwsh
+        run: |
+          $toolsRoot = Join-Path $env:RUNNER_TEMP 'media-integration'
+          New-Item -ItemType Directory -Path $toolsRoot | Out-Null
+          ./.github/scripts/Install-MediaTools.ps1 -ApplicationDirectory $toolsRoot
+          "CONVERTER_TEST_MEDIA_TOOLS=$(Join-Path $toolsRoot 'media-tools')" >> $env:GITHUB_ENV
       - name: Build and test release profile
         shell: pwsh
         run: |
@@ -111,7 +119,7 @@ jobs:
           }
           $smokeArgs = @('-FileManagement', '-ImageConversion')
           if ($env:GITHUB_REF_NAME -eq 'codex/m3-audio-video-conversion') {
-            ./.github/scripts/Install-MediaTools.ps1 -ApplicationDirectory (Join-Path $env:PACKAGE_TEST_ROOT 'extracted')
+            Copy-Item -LiteralPath $env:CONVERTER_TEST_MEDIA_TOOLS -Destination (Join-Path $env:PACKAGE_TEST_ROOT 'extracted') -Recurse
             $smokeArgs += '-MediaConversion'
           }
           & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1 @smokeArgs
