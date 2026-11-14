@@ -84,7 +84,10 @@ public sealed class ConversionQueueService : IAsyncDisposable
         if (entry.Job.Status == ConversionStatus.Queued)
             Finish(entry, entry.Job.Cancel());
         else
+        {
+            entry.Job = entry.Job.StopAcceptingCancellation();
             entry.CancellationCallbacks = entry.Cancellation.CancelAsync();
+        }
         return true;
     }
 
@@ -158,7 +161,7 @@ public sealed class ConversionQueueService : IAsyncDisposable
         {
             entry.Cancellation.Token.ThrowIfCancellationRequested();
             entry.Committing = true;
-            entry.Job = entry.Job.BeginCommit();
+            entry.Job = entry.Job.StopAcceptingCancellation();
         }
     }
 

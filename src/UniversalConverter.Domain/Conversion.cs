@@ -72,7 +72,7 @@ public sealed record ConversionJob
         ? this with { Status = ConversionStatus.Running, StartedAt = DateTimeOffset.UtcNow }
         : throw InvalidTransition();
 
-    public ConversionJob BeginCommit() => Status == ConversionStatus.Running
+    public ConversionJob StopAcceptingCancellation() => Status == ConversionStatus.Running
         ? this with { CanCancel = false }
         : throw InvalidTransition();
 

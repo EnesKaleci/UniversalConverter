@@ -56,11 +56,11 @@ public sealed class ImageConversionEngine : IOutputCommitEngine
 
         using var transformed = Orient(bitmap, codec.EncodedOrigin, target == SKEncodedImageFormat.Jpeg);
         var image = transformed ?? bitmap;
-        return Task.FromResult(WriteOutput(request, image, target, progress, token, beginCommit));
+        return Task.FromResult(WriteOutput(request, image, target, token, beginCommit));
     }
 
     private static ConversionResult WriteOutput(ConversionRequest request, SKBitmap bitmap, SKEncodedImageFormat format,
-        IProgress<ConversionProgress> progress, CancellationToken token, Action beginCommit)
+        CancellationToken token, Action beginCommit)
     {
         var output = Path.GetFullPath(request.OutputPath!);
         var directory = Path.GetDirectoryName(output)!;
@@ -102,7 +102,6 @@ public sealed class ImageConversionEngine : IOutputCommitEngine
                     codec.GetPixels(bitmap.Info, bitmap.GetPixels()) != SKCodecResult.Success)
                     throw new ConversionException(ConversionFailure.Encoding);
             }
-            progress.Report(new ConversionProgress(0));
             token.ThrowIfCancellationRequested();
             ValidateDirectory(directory);
             beginCommit();
@@ -119,7 +118,8 @@ public sealed class ImageConversionEngine : IOutputCommitEngine
                     created = false;
                     return ConversionResult.CreatedFile(candidate);
                 }
-                catch (IOException) when (filesystem.EntryExists(candidate) || Directory.Exists(candidate))
+                catch (Exception error) when ((error is IOException or UnauthorizedAccessException) &&
+                                              (filesystem.EntryExists(candidate) || Directory.Exists(candidate)))
                 {
                     if (policy == OutputCollisionPolicy.Skip)
                         return ConversionResult.Skipped();
