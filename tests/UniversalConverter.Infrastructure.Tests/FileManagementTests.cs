@@ -226,7 +226,7 @@ public sealed class FileManagementTests
         await engine.BothStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         model.Refresh();
         Assert.Equal(2, model.ActiveJobs.Count(job => job.Status == "Running"));
-        var queued = Assert.Single(model.ActiveJobs.Where(job => job.Status == "Queued"));
+        var queued = Assert.Single(model.ActiveJobs, job => job.Status == "Queued");
         Assert.InRange(model.QueueProgress, 1, 99);
         queued.Cancel.Execute(null);
         var running = model.ActiveJobs.First(job => job.Status == "Running");
