@@ -5,9 +5,18 @@ using Xunit;
 
 namespace UniversalConverter.Infrastructure.Tests;
 
+public sealed class PinnedMediaTheoryAttribute : TheoryAttribute
+{
+    public PinnedMediaTheoryAttribute()
+    {
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CONVERTER_TEST_MEDIA_TOOLS")))
+            Skip = "Pinned FFmpeg integration runs in the Windows release profile.";
+    }
+}
+
 public sealed class MediaConversionTests
 {
-    [Theory]
+    [PinnedMediaTheory]
     [InlineData("wav", "mp3")]
     [InlineData("mp3", "wav")]
     [InlineData("wav", "flac")]
@@ -32,7 +41,7 @@ public sealed class MediaConversionTests
     public async Task ConvertsAndVerifiesMediaWhenPinnedToolsAreInstalled(string source, string target)
     {
         var tools = Environment.GetEnvironmentVariable("CONVERTER_TEST_MEDIA_TOOLS");
-        Assert.SkipWhen(string.IsNullOrEmpty(tools), "Pinned FFmpeg integration runs in the Windows release profile.");
+
         using var workspace = new TemporaryWorkspace();
         var input = Path.Combine(workspace.DirectoryPath, $"İstanbul Şarkı Iİıi.{source}");
         var sourceFormat = MediaFormats.All.Single(x => x.Format.Extension == source);
