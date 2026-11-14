@@ -41,7 +41,9 @@ jobs:
           REF_PROTECTED: ${{ github.ref_protected }}
         run: |
           $commit = git rev-parse HEAD
-          if ($LASTEXITCODE -ne 0 -or $commit -ne $env:GITHUB_SHA) { throw 'Commit does not match the workflow source.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the checked out commit.' }
+          $eventCommit = git rev-parse "$($env:GITHUB_SHA)^{commit}"
+          if ($LASTEXITCODE -ne 0 -or $commit -ne $eventCommit) { throw 'Commit does not match the workflow source.' }
           $version = '0.1.0-ci'
           if ($env:GITHUB_REF_TYPE -eq 'tag') {
             if ($env:GITHUB_REPOSITORY -ne 'EnesKaleci/UniversalConverter' -or $env:REF_PROTECTED -ne 'true' -or
@@ -82,12 +84,20 @@ jobs:
         run: >
           dotnet publish src/UniversalConverter.Desktop -c Release -r win-x64 --self-contained true
           -p:WindowsReleaseProfile=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:PublishTrimmed=false -p:ContinuousIntegrationBuild=true "-p:Version=$env:RELEASE_VERSION" -o artifacts/publish
+          -p:PublishTrimmed=false -p:ContinuousIntegrationBuild=true -p:IncludeSourceRevisionInInformationalVersion=false
+          "-p:Version=$env:RELEASE_VERSION" -o artifacts/publish
       - name: Test extracted ZIP, startup and both languages
         id: candidate
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.source.outputs.version }}
         run: |
           ./.github/scripts/Test-WindowsPortable.ps1 -WindowsReleaseProfile
+          $exe = Get-Item -LiteralPath (Join-Path $env:PACKAGE_TEST_ROOT 'extracted/UniversalConverter.Desktop.exe')
+          if ($exe.VersionInfo.ProductName -cne 'Universal Converter' -or
+              $exe.VersionInfo.ProductVersion -cne $env:RELEASE_VERSION) {
+            throw 'Packaged EXE metadata does not match the release build.'
+          }
           & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Windows localization smoke test failed.' }
           $zip = "artifacts/$($env:ARTIFACT_NAME).zip"
@@ -185,7 +195,8 @@ jobs:
           if ((Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash -ne $env:UNSIGNED_HASH) {
             throw 'Unsigned ZIP hash differs from the build job.'
           }
-          [IO.Compression.ZipFile]::ExtractToDirectory($zipPath, (Join-Path $env:RUNNER_TEMP 'signing-input'))
+          $inputRoot = Join-Path $env:RUNNER_TEMP 'signing-input'
+          [IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $inputRoot)
       - name: Upload provider input
         id: provider-input
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -203,6 +214,8 @@ jobs:
           signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
           artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_SLUG }}
           github-artifact-id: ${{ steps.provider-input.outputs.artifact-id }}
+          parameters: |
+            version: ${{ toJSON(needs.candidate.outputs.version) }}
           wait-for-completion: true
           wait-for-completion-timeout-in-seconds: 1200
           output-artifact-directory: ${{ runner.temp }}/signing-output

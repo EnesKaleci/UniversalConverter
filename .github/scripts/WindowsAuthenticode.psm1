@@ -65,9 +65,16 @@ function Get-AuthenticodeTimestamp {
         [BitConverter]::ToUInt16($Image, $Table.Offset + 6) -ne 2) {
         throw 'Expected a single PKCS#7 Authenticode certificate record.'
     }
-    $pkcs = [byte[]]::new($certLength - 8)
-    [Array]::Copy($Image, $Table.Offset + 8, $pkcs, 0, $pkcs.Length)
-    $signature.Decode($pkcs)
+    $pkcs = [ReadOnlyMemory[byte]]::new($Image, [int]($Table.Offset + 8), [int]($Table.Size - 8))
+    $reader = [System.Formats.Asn1.AsnReader]::new($pkcs, [System.Formats.Asn1.AsnEncodingRules]::BER)
+    $envelope = $reader.ReadEncodedValue()
+    if ($envelope.Length -gt $certLength - 8 -or $pkcs.Length - $envelope.Length -gt 7) {
+        throw 'Unexpected data after the Authenticode CMS.'
+    }
+    for ($i = $Table.Offset + 8 + $envelope.Length; $i -lt $Image.Length; $i++) {
+        if ($Image[$i] -ne 0) { throw 'The Authenticode certificate table has nonzero padding.' }
+    }
+    $signature.Decode($envelope.ToArray())
     $sha256Oid = '2.16.840.1.101.3.4.2.1'
     if ($signature.ContentInfo.ContentType.Value -ne '1.3.6.1.4.1.311.2.1.4' -or
         $signature.SignerInfos.Count -ne 1 -or $signature.SignerInfos[0].DigestAlgorithm.Value -ne $sha256Oid) {
@@ -88,6 +95,9 @@ function Get-AuthenticodeTimestamp {
         throw 'The embedded PE image digest is not SHA-256.'
     }
 
+    if ($signer.UnsignedAttributes | Where-Object { $_.Oid.Value -eq '1.3.6.1.4.1.311.2.4.1' }) {
+        throw 'An additional nested Authenticode signature was found.'
+    }
     $attributes = @($signer.UnsignedAttributes | Where-Object { $_.Oid.Value -eq '1.3.6.1.4.1.311.3.3.1' })
     if ($attributes.Count -ne 1 -or $attributes[0].Values.Count -ne 1) { throw 'Missing or ambiguous RFC 3161 timestamp.' }
     $encoded = $attributes[0].Values[0].RawData
@@ -113,6 +123,10 @@ function Assert-WindowsReleaseSignature {
     $certificate = $signature.SignerCertificate
     if ($certificate.GetCertHashString([Security.Cryptography.HashAlgorithmName]::SHA256) -ne $CertificateSha256) {
         throw 'The Authenticode publisher certificate does not match the approved SHA-256 fingerprint.'
+    }
+    $eku = $certificate.Extensions['2.5.29.37']
+    if (-not $eku -or $eku.EnhancedKeyUsages.Value -notcontains '1.3.6.1.5.5.7.3.3') {
+        throw 'The approved certificate is missing the code signing EKU.'
     }
     $rsa = [Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPublicKey($certificate)
     try {
