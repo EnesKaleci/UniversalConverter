@@ -161,6 +161,20 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <ItemsControl ItemsSource="{Binding QueueResults}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="local:JobRow">
+                  <Border Classes="panel" Margin="0,0,0,8">
+                    <StackPanel Spacing="6">
+                      <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="secondary" Text="{Binding Mode}" />
+                      <TextBlock Classes="secondary" Text="{Binding Status}" />
+                      <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </StackPanel>
           <StackPanel IsVisible="{Binding IsHistory}" Spacing="12">
             <TextBlock Classes="secondary" Text="{Binding HistoryMessage}" />
@@ -173,6 +187,7 @@
                       <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
                       <TextBlock Classes="secondary" Text="{Binding Status}" />
                       <TextBlock Classes="secondary" Text="{Binding Timing}" />
+                      <TextBlock Classes="secondary" Text="{Binding SourcePath}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SourcePath}" />
                       <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
                       <TextBlock Text="{Binding Output}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Output}" />
                       <Button Content="{Binding LocationLabel}" Command="{Binding OpenLocation}" IsVisible="{Binding HasOutput}" />

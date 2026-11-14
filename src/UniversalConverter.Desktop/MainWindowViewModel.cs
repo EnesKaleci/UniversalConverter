@@ -26,6 +26,7 @@ public sealed partial class JobRow(Guid id, string title, ICommand cancel) : Obs
     [ObservableProperty] private string _timing = "";
     [ObservableProperty] private string _mode = "";
     [ObservableProperty] private string _locationLabel = "";
+    public string SourcePath { get; init; } = "";
     public ICommand? OpenLocation { get; set; }
     public bool HasOutput => OpenLocation is not null;
 }
@@ -71,7 +72,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     public UiText Text => _localization.Text;
     public IReadOnlyList<TargetOption> Targets { get; } =
-        [new("JPG", SimulationEngine.Jpeg), new("PNG", SimulationEngine.Png), new("WebP", SimulationEngine.WebP)];
+        [new("JPG", SimulationEngine.Jpeg), new("PNG", SimulationEngine.Png), new("WebP", SimulationEngine.WebP), new("JPEG (.jpeg)", ImageFormats.JpegLong)];
 
     private Page SelectedPage => (Page)SelectedPageIndex;
     public string PageTitle => Text.Get(SelectedPage.ToString());
@@ -114,6 +115,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _preferencesLoaded;
     [ObservableProperty] private IReadOnlyList<JobRow> _activeJobs = [];
     [ObservableProperty] private IReadOnlyList<JobRow> _finishedJobs = [];
+    [ObservableProperty] private IReadOnlyList<JobRow> _queueResults = [];
     [ObservableProperty] private IReadOnlyList<JobRow> _imageHistory = [];
 
     internal Task InitializeAsync() => _initialization ??= LoadSettingsAsync();
@@ -269,6 +271,9 @@ public partial class MainWindowViewModel : ObservableObject
             ActiveJobs = active;
         if (!FinishedJobs.SequenceEqual(finished))
             FinishedJobs = finished;
+        var results = _lastSnapshot.Where(job => job.IsTerminal).Take(20).Select(job => _jobRows[job.Id]).ToArray();
+        if (!QueueResults.SequenceEqual(results))
+            QueueResults = results;
 
         var current = _lastSnapshot.Where(job => job.IsTerminal && job.Request.Simulation == false).Select(job =>
         {
@@ -320,6 +325,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             Status = StatusText(entry.Status, false),
             Message = entry.Status == ConversionStatus.Failed ? FailureText(entry.Error, false) : "",
+            SourcePath = entry.SourcePath,
             Output = entry.OutputPath ?? "",
             Timing = Text.Format("HistoryTiming", entry.FinishedAt.ToLocalTime(), Math.Max(0, entry.Duration.TotalSeconds)),
             LocationLabel = Text.OpenLocation

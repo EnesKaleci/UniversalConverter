@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using SkiaSharp;
 using UniversalConverter.Application;
@@ -17,6 +18,7 @@ public sealed class ImageConversionTests
     [Theory]
     [InlineData("png", "jpg")]
     [InlineData("png", "webp")]
+    [InlineData("png", "jpeg")]
     [InlineData("jpeg", "png")]
     [InlineData("jpg", "webp")]
     [InlineData("webp", "png")]
@@ -131,6 +133,52 @@ public sealed class ImageConversionTests
         error = await Assert.ThrowsAsync<ConversionException>(() =>
             Convert(Path.Combine(workspace.DirectoryPath, "missing.png"), output, "webp"));
         Assert.Equal(ConversionFailure.SourceAccess, error.Reason);
+    }
+
+    [Fact]
+    public async Task RejectsAnOversizedPngHeaderBeforeDecodingPixels()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var path = Fixture(workspace.DirectoryPath, "limit.png", "png");
+        var png = File.ReadAllBytes(path);
+        BinaryPrimitives.WriteInt32BigEndian(png.AsSpan(16, 4), 6000);
+        BinaryPrimitives.WriteInt32BigEndian(png.AsSpan(20, 4), 6000);
+        BinaryPrimitives.WriteUInt32BigEndian(png.AsSpan(29, 4), PngCrc(png.AsSpan(12, 17)));
+        File.WriteAllBytes(path, png);
+        var output = Path.Combine(workspace.DirectoryPath, "output.jpg");
+
+        var error = await Assert.ThrowsAsync<ConversionException>(() => Convert(path, output, "jpg"));
+        Assert.Equal(ConversionFailure.ImageTooLarge, error.Reason);
+        Assert.False(File.Exists(output));
+    }
+
+    [Fact]
+    public async Task RejectsApngBeforeCreatingAnOutput()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var path = Fixture(workspace.DirectoryPath, "animated.png", "png");
+        var png = File.ReadAllBytes(path);
+        byte[] chunk = [0, 0, 0, 8, (byte)'a', (byte)'c', (byte)'T', (byte)'L',
+            0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0];
+        BinaryPrimitives.WriteUInt32BigEndian(chunk.AsSpan(16, 4), PngCrc(chunk.AsSpan(4, 12)));
+        File.WriteAllBytes(path, [.. png.AsSpan(0, 33), .. chunk, .. png.AsSpan(33)]);
+        var output = Path.Combine(workspace.DirectoryPath, "output.jpg");
+
+        var error = await Assert.ThrowsAsync<ConversionException>(() => Convert(path, output, "jpg"));
+        Assert.Equal(ConversionFailure.AnimatedImage, error.Reason);
+        Assert.False(File.Exists(output));
+    }
+
+    private static uint PngCrc(ReadOnlySpan<byte> data)
+    {
+        var crc = uint.MaxValue;
+        foreach (var value in data)
+        {
+            crc ^= value;
+            for (var bit = 0; bit < 8; bit++)
+                crc = (crc >> 1) ^ ((crc & 1) == 0 ? 0u : 0xedb88320u);
+        }
+        return ~crc;
     }
 
     [Fact]

@@ -12,7 +12,7 @@ Use the Windows x64 Single-file **Unsigned Development/Test Build**. Record the 
 | 6 | JPEG → WebP | The WebP opens and has the expected resolution. |
 | 7 | WebP → PNG | The PNG opens and has the expected resolution. |
 | 8 | WebP → JPEG | The JPEG opens and has the expected resolution. |
-| 9 | Choose a .jpeg source | The app identifies it as JPEG and offers the same destinations as .jpg. |
+| 9 | Choose a .jpeg source and the .jpeg output option | The app recognizes JPEG inputs and creates a .jpeg file for the explicit target. |
 | 10 | Choose the source format as target | The pair is rejected. |
 | 11 | Compare JPEG quality 5 and 95 | Both files open and their encoded content differs. |
 | 12 | Compare WebP quality 5 and 95 | Both files open and their encoded content differs. |
@@ -26,7 +26,7 @@ Use the Windows x64 Single-file **Unsigned Development/Test Build**. Record the 
 | 20 | Run Rename with an occupied destination name | An available numbered name is used and the existing file hash is unchanged. |
 | 21 | Run Skip with an occupied destination name | History shows Skipped without a generated output path. |
 | 22 | Batch two sources with the same stem from different directories | Both outputs use distinct names and both are readable. |
-| 23 | Queue at least three images | No more than two jobs run at once and queue progress changes with real state. |
+| 23 | Queue at least three images | No more than two jobs run at once and the queue displays live state, cancellation and up to 20 recent outcomes. |
 | 24 | Cancel a waiting job | It becomes Cancelled and no output exists. |
 | 25 | Cancel a running job before final placement | It becomes Cancelled and no final or application-owned temporary file remains after the codec returns. |
 | 26 | Queue broken, empty and mismatched image files | Failed jobs show a localized summary without publishing a file. |

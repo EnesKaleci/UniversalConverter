@@ -29,8 +29,8 @@ public partial class MainWindowViewModel
     public bool CanQueueFiles => CanEditFiles && _proposals.Any(proposal => proposal.Path is not null);
     public bool CanConvertFiles => CanEditFiles && _proposals.Any(proposal =>
         proposal.Path is not null || proposal.Issue == OutputIssue.Conflict);
-    public bool ShowsQuality => SelectedTarget?.Format == ImageFormats.Jpeg || SelectedTarget?.Format == ImageFormats.WebP;
-    public bool ShowsJpegWarning => SelectedTarget?.Format == ImageFormats.Jpeg &&
+    public bool ShowsQuality => SelectedTarget is { } target && target.Format != ImageFormats.Png;
+    public bool ShowsJpegWarning => (SelectedTarget?.Format == ImageFormats.Jpeg || SelectedTarget?.Format == ImageFormats.JpegLong) &&
         _inputs.Any(file => file.Format == ImageFormats.Png || file.Format == ImageFormats.WebP);
 
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]

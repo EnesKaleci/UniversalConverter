@@ -26,7 +26,7 @@ public sealed class ExtensionFormatDetector : IFormatDetector
     {
         _formats = formats.ToDictionary(format => format.Extension, StringComparer.OrdinalIgnoreCase);
         if (_formats.TryGetValue("jpg", out var jpeg))
-            _formats.TryAdd("jpeg", jpeg);
+            _formats["jpeg"] = jpeg;
     }
 
     public FileFormat? Detect(string path) =>
