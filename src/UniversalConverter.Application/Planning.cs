@@ -22,7 +22,7 @@ public sealed class ExtensionFormatDetector : IFormatDetector
 {
     private readonly Dictionary<string, FileFormat> _formats;
 
-    public ExtensionFormatDetector(IEnumerable<FileFormat> formats) =>
+    public ExtensionFormatDetector(IEnumerable<FileFormat> formats)
     {
         _formats = formats.ToDictionary(format => format.Extension, StringComparer.OrdinalIgnoreCase);
         if (_formats.TryGetValue("jpg", out var jpeg))
