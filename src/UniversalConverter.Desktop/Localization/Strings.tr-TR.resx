@@ -11,7 +11,7 @@
   <data name="About" xml:space="preserve"><value>Hakkında</value></data>
   <data name="SimulationBanner" xml:space="preserve"><value>Simülasyon modu. İşlemler çıktı dosyası oluşturmaz.</value></data>
   <data name="DashboardHeading" xml:space="preserve"><value>Dönüştürmeyi dene</value></data>
-  <data name="DashboardIntro" xml:space="preserve"><value>Toplu işlem, ilerleme ve iptal özelliklerini denemek için PNG, JPG veya WebP dosyaları ekle.</value></data>
+  <data name="DashboardIntro" xml:space="preserve"><value>PNG, JPEG ve WebP görsellerini bu cihazda dönüştür.</value></data>
   <data name="OpenConvert" xml:space="preserve"><value>Dönüştür ekranını aç</value></data>
   <data name="DropTitle" xml:space="preserve"><value>Görsel dosyalarını buraya bırak</value></data>
   <data name="SupportedImages" xml:space="preserve"><value>PNG, JPG ve WebP</value></data>
@@ -43,7 +43,7 @@
   <data name="ThemeSaved" xml:space="preserve"><value>Tema kaydedildi.</value></data>
   <data name="ThemeSaveError" xml:space="preserve"><value>Tema kaydedilemedi.</value></data>
   <data name="SettingsLoadError" xml:space="preserve"><value>Tercihler yüklenemedi. Varsayılan ayarlar etkin.</value></data>
-  <data name="AboutDescription" xml:space="preserve"><value>Çevrimdışı masaüstü dosya dönüştürücüsü. GPL-3.0-or-later lisansıyla sunulur.</value></data>
+  <data name="AboutDescription" xml:space="preserve"><value>PNG, JPEG ve WebP görsellerini bu cihazda dönüştür.</value></data>
   <data name="PlatformLabel" xml:space="preserve"><value>İşletim sistemi: {0}</value></data>
   <data name="UnknownPlatform" xml:space="preserve"><value>Bilinmiyor</value></data>
   <data name="SkippedFiles" xml:space="preserve"><value>Desteklenmeyen, yinelenen veya sınırı aşan {0:N0} dosya atlandı.</value></data>
@@ -106,4 +106,27 @@
   <data name="QueueProgress" xml:space="preserve"><value>Toplam ilerleme · %{0}</value></data>
   <data name="JobFailedMessage" xml:space="preserve"><value>Simülasyon tamamlanamadı.</value></data>
   <data name="InputMissingCount" xml:space="preserve"><value>{0} dosya bulunamadı.</value></data>
+  <data name="ImageBanner" xml:space="preserve"><value>PNG, JPEG ve WebP görsellerini dönüştür. Simülasyon dosya oluşturmadan çalışır.</value></data>
+  <data name="ImageQuality" xml:space="preserve"><value>JPEG / WebP kalitesi</value></data>
+  <data name="JpegWhiteBackground" xml:space="preserve"><value>JPEG şeffaflığı desteklemez. Şeffaf alanlar beyaz olur.</value></data>
+  <data name="ConvertImages" xml:space="preserve"><value>Görselleri dönüştür</value></data>
+  <data name="ImageHistory" xml:space="preserve"><value>Görsel dönüşümleri</value></data>
+  <data name="SimulationHistory" xml:space="preserve"><value>Bu oturumdaki simülasyonlar</value></data>
+  <data name="SimulationMode" xml:space="preserve"><value>Simülasyon</value></data>
+  <data name="ImageMode" xml:space="preserve"><value>Görsel dönüşümü</value></data>
+  <data name="ImageCompleted" xml:space="preserve"><value>Görsel dönüştürüldü</value></data>
+  <data name="ImageSkipped" xml:space="preserve"><value>Atlandı · Çıktı adı kullanımda</value></data>
+  <data name="QueueSettled" xml:space="preserve"><value>Sonuçlanan işler · {0}/{1}</value></data>
+  <data name="HistoryTiming" xml:space="preserve"><value>{0:g} · {1:0.00} saniye</value></data>
+  <data name="OpenLocation" xml:space="preserve"><value>Dosya konumunu aç</value></data>
+  <data name="OpenLocationError" xml:space="preserve"><value>Çıktı klasörü açılamadı. Dosya taşınmış olabilir.</value></data>
+  <data name="HistoryLoadError" xml:space="preserve"><value>Kayıtlı görsel geçmişi yüklenemedi.</value></data>
+  <data name="ImageErrorInvalidImage" xml:space="preserve"><value>Görsel boş, bozuk veya okunamıyor.</value></data>
+  <data name="ImageErrorFormatMismatch" xml:space="preserve"><value>Görsel formatı uzantıyla veya seçilen hedefle uyuşmuyor.</value></data>
+  <data name="ImageErrorAnimatedImage" xml:space="preserve"><value>Animasyonlu görseller desteklenmiyor.</value></data>
+  <data name="ImageErrorImageTooLarge" xml:space="preserve"><value>Görsel dosya boyutu veya piksel sınırını aşıyor.</value></data>
+  <data name="ImageErrorSourceAccess" xml:space="preserve"><value>Kaynak dosya açılamadı.</value></data>
+  <data name="ImageErrorOutputAccess" xml:space="preserve"><value>Hedefe yazılamadı. Konumu ve izinleri kontrol et.</value></data>
+  <data name="ImageErrorEncoding" xml:space="preserve"><value>Görsel kodlanamadı veya doğrulanamadı.</value></data>
+  <data name="ImageErrorDiskFull" xml:space="preserve"><value>Hedefte yeterli disk alanı yok.</value></data>
 </root>

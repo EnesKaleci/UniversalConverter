@@ -66,6 +66,14 @@ public sealed class UiText
     public string QueueEmpty => Get(nameof(QueueEmpty));
     public string HistoryEmpty => Get(nameof(HistoryEmpty));
 
+    public string ImageBanner => Get(nameof(ImageBanner));
+    public string ImageQuality => Get(nameof(ImageQuality));
+    public string JpegWhiteBackground => Get(nameof(JpegWhiteBackground));
+    public string ConvertImages => Get(nameof(ConvertImages));
+    public string ImageHistory => Get(nameof(ImageHistory));
+    public string SimulationHistory => Get(nameof(SimulationHistory));
+    public string OpenLocation => Get(nameof(OpenLocation));
+
     internal string Get(string key) =>
         Read(key, Culture) ?? Read(key, CultureInfo.InvariantCulture) ??
         Read("TextUnavailable", CultureInfo.InvariantCulture) ?? "Text unavailable.";

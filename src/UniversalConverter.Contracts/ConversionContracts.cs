@@ -10,6 +10,18 @@ public interface IConverterEngine
     Task<ConversionResult> ConvertAsync(ConversionRequest request, IProgress<ConversionProgress> progress, CancellationToken cancellationToken);
 }
 
+public interface IOutputCommitEngine : IConverterEngine
+{
+    Task<ConversionResult> ConvertAsync(ConversionRequest request, IProgress<ConversionProgress> progress,
+        CancellationToken cancellationToken, Action beginCommit);
+}
+
+public interface IConversionHistory
+{
+    Task StoreAsync(ConversionHistoryEntry entry);
+    Task<IReadOnlyList<ConversionHistoryEntry>> LoadAsync();
+}
+
 public interface IConversionEngineRegistry
 {
     IReadOnlyList<IConverterEngine> Engines { get; }

@@ -3,6 +3,7 @@
     <DefineConstants>$(DefineConstants);WINDOWS_RELEASE_PROFILE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="SkiaSharp" />
     <ProjectReference Include="../UniversalConverter.Application/UniversalConverter.Application.csproj" />
     <ProjectReference Include="../UniversalConverter.Contracts/UniversalConverter.Contracts.csproj" />
     <ProjectReference Include="../UniversalConverter.Domain/UniversalConverter.Domain.csproj" />

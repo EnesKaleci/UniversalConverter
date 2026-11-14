@@ -45,12 +45,16 @@ public partial class App : Avalonia.Application
         builder.Services.AddSingleton<IOutputPreferences>(services => services.GetRequiredService<SettingsDatabase>());
         builder.Services.AddSingleton<IFileCatalog, LocalFileCatalog>();
         builder.Services.AddSingleton<FilePreparation>();
+        builder.Services.AddSingleton<IConversionHistory>(services => services.GetRequiredService<SettingsDatabase>());
         builder.Services.AddSingleton<IConverterEngine, SimulationEngine>();
+        builder.Services.AddSingleton<IConverterEngine, ImageConversionEngine>();
         builder.Services.AddSingleton<IConversionEngineRegistry, ConversionEngineRegistry>();
         builder.Services.AddSingleton<IFormatDetector>(_ => new ExtensionFormatDetector(SimulationEngine.Formats));
         builder.Services.AddSingleton<IConversionPlanner, ConversionPlanner>();
         builder.Services.AddSingleton<ConversionCoordinator>();
-        builder.Services.AddSingleton<ConversionQueueService>();
+        builder.Services.AddSingleton(services => new ConversionQueueService(
+            services.GetRequiredService<ConversionCoordinator>(), history: services.GetRequiredService<IConversionHistory>(),
+            historyError: error => Program.Startup.Exception("Image history write failed", error)));
         builder.Services.AddSingleton(Program.Localization);
         builder.Services.AddSingleton(Program.Startup);
         builder.Services.AddSingleton(services => new MainWindowViewModel(
@@ -60,7 +64,8 @@ public partial class App : Avalonia.Application
             services.GetRequiredService<FilePreparation>(),
             services.GetRequiredService<UiLocalization>(),
             services.GetRequiredService<StartupLog>(),
-            services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MainWindowViewModel>>()));
+            services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MainWindowViewModel>>(),
+            services.GetRequiredService<IConversionHistory>()));
 
         var host = builder.Build();
         try

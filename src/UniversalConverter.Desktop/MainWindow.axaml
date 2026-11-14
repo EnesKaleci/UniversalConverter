@@ -39,7 +39,7 @@
     <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="32,28" RowSpacing="18">
       <TextBlock Classes="title" AutomationProperties.AutomationId="PageTitle" Text="{Binding PageTitle}" />
       <Border Grid.Row="1" Classes="panel" Padding="16,10">
-        <TextBlock Classes="secondary" AutomationProperties.AutomationId="SimulationBanner" Text="{Binding Text.SimulationBanner}" />
+        <TextBlock Classes="secondary" AutomationProperties.AutomationId="SimulationBanner" Text="{Binding Text.ImageBanner}" />
       </Border>
       <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
         <Panel>
@@ -107,6 +107,16 @@
                     </ComboBox>
                   </StackPanel>
                 </WrapPanel>
+                <StackPanel Spacing="4" IsVisible="{Binding ShowsQuality}">
+                  <TextBlock Text="{Binding Text.ImageQuality}" />
+                  <DockPanel LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding Quality}" Margin="12,0,0,0" VerticalAlignment="Center" />
+                    <Slider Minimum="1" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                            AutomationProperties.AutomationId="ImageQuality" AutomationProperties.Name="{Binding Text.ImageQuality}"
+                            Value="{Binding Quality, Mode=TwoWay}" />
+                  </DockPanel>
+                </StackPanel>
+                <TextBlock Classes="secondary" IsVisible="{Binding ShowsJpegWarning}" Text="{Binding Text.JpegWhiteBackground}" />
                 <TextBlock Text="{Binding Text.OutputFolder}" />
                 <TextBlock AutomationProperties.AutomationId="OutputFolderPath" Text="{Binding DestinationLabel}" TextTrimming="CharacterEllipsis"
                            ToolTip.Tip="{Binding DestinationLabel}" />
@@ -117,7 +127,9 @@
               </StackPanel>
             </Border>
             <WrapPanel ItemSpacing="8" LineSpacing="8">
-              <Button Classes="accent" AutomationProperties.AutomationId="QueueSimulation" Content="{Binding Text.QueueSimulation}"
+              <Button Classes="accent" AutomationProperties.AutomationId="ConvertImages" Content="{Binding Text.ConvertImages}"
+                      Command="{Binding ConvertImagesCommand}" IsEnabled="{Binding CanConvertFiles}" />
+              <Button AutomationProperties.AutomationId="QueueSimulation" Content="{Binding Text.QueueSimulation}"
                       Command="{Binding QueueSimulationCommand}" IsEnabled="{Binding CanQueueFiles}" />
               <Button Content="{Binding Text.RefreshPreview}" Command="{Binding RefreshPreviewCommand}"
                       IsEnabled="{Binding CanEditFiles}" IsVisible="{Binding HasFiles}" />
@@ -130,7 +142,7 @@
             <TextBlock Classes="secondary" Text="{Binding Text.QueueEmpty}" IsVisible="{Binding !HasJobs}" />
             <StackPanel Spacing="5" IsVisible="{Binding HasJobs}">
               <TextBlock Text="{Binding QueueProgressText}" />
-              <ProgressBar Minimum="0" Maximum="100" Value="{Binding QueueProgress}" AutomationProperties.Name="{Binding QueueProgressText}" />
+              <ProgressBar Minimum="0" Maximum="100" Value="{Binding QueueProgress}" IsIndeterminate="{Binding QueueIndeterminate}" AutomationProperties.Name="{Binding QueueProgressText}" />
             </StackPanel>
             <ItemsControl AutomationProperties.AutomationId="ActiveJobs" ItemsSource="{Binding ActiveJobs}">
               <ItemsControl.ItemTemplate>
@@ -140,9 +152,10 @@
                       <StackPanel Spacing="6">
                         <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
                         <TextBlock Classes="secondary" AutomationProperties.AutomationId="JobStatus" Text="{Binding Status}" />
-                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding Percent}" />
+                        <TextBlock Classes="secondary" Text="{Binding Mode}" />
+                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding Percent}" IsIndeterminate="{Binding Indeterminate}" />
                       </StackPanel>
-                      <Button Grid.Column="1" Content="{Binding CancelLabel}" Command="{Binding Cancel}" />
+                      <Button Grid.Column="1" Content="{Binding CancelLabel}" Command="{Binding Cancel}" IsEnabled="{Binding CanCancel}" />
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -150,7 +163,26 @@
             </ItemsControl>
           </StackPanel>
           <StackPanel IsVisible="{Binding IsHistory}" Spacing="12">
-            <TextBlock Classes="secondary" Text="{Binding Text.HistoryNote}" />
+            <TextBlock Classes="secondary" Text="{Binding HistoryMessage}" />
+            <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Text.ImageHistory}" />
+            <ItemsControl ItemsSource="{Binding ImageHistory}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="local:JobRow">
+                  <Border Classes="panel" Margin="0,0,0,8">
+                    <StackPanel Spacing="6">
+                      <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="secondary" Text="{Binding Status}" />
+                      <TextBlock Classes="secondary" Text="{Binding Timing}" />
+                      <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Output}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Output}" />
+                      <Button Content="{Binding LocationLabel}" Command="{Binding OpenLocation}" IsVisible="{Binding HasOutput}" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Text.SimulationHistory}" IsVisible="{Binding HasSimulationHistory}" />
+            <TextBlock Classes="secondary" Text="{Binding Text.HistoryNote}" IsVisible="{Binding HasSimulationHistory}" />
             <TextBlock Classes="secondary" Text="{Binding Text.HistoryEmpty}" IsVisible="{Binding !HasFinishedJobs}" />
             <ItemsControl AutomationProperties.AutomationId="FinishedJobs" ItemsSource="{Binding FinishedJobs}">
               <ItemsControl.ItemTemplate>

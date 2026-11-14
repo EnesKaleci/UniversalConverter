@@ -20,6 +20,14 @@ public sealed partial class JobRow(Guid id, string title, ICommand cancel) : Obs
     [ObservableProperty] private int _percent;
     [ObservableProperty] private string _cancelLabel = "";
     [ObservableProperty] private string _message = "";
+    [ObservableProperty] private bool _indeterminate;
+    [ObservableProperty] private bool _canCancel;
+    [ObservableProperty] private string _output = "";
+    [ObservableProperty] private string _timing = "";
+    [ObservableProperty] private string _mode = "";
+    [ObservableProperty] private string _locationLabel = "";
+    public ICommand? OpenLocation { get; set; }
+    public bool HasOutput => OpenLocation is not null;
 }
 
 public partial class MainWindowViewModel : ObservableObject
@@ -28,6 +36,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     private readonly ConversionQueueService _queue;
     private readonly ISettingsStore _settings;
+    private readonly IConversionHistory? _history;
+    private IReadOnlyList<ConversionHistoryEntry> _previousHistory = [];
+    private bool _historyLoadFailed;
     private readonly UiLocalization _localization;
     private readonly StartupLog _startup;
     private readonly ILogger<MainWindowViewModel> _logger;
@@ -44,10 +55,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     internal MainWindowViewModel(ConversionQueueService queue, ISettingsStore settings, IOutputPreferences outputPreferences,
         FilePreparation preparation, UiLocalization localization,
-        StartupLog startup, ILogger<MainWindowViewModel> logger)
+        StartupLog startup, ILogger<MainWindowViewModel> logger, IConversionHistory? history = null)
     {
         _queue = queue;
         _settings = settings;
+        _history = history;
         _outputPreferences = outputPreferences;
         _preparation = preparation;
         _localization = localization;
@@ -75,7 +87,7 @@ public partial class MainWindowViewModel : ObservableObject
         DesktopPlatform.Unknown => Text.Get("UnknownPlatform"),
         var platform => platform.ToString()
     });
-    public string QueueSummary => Text.Format("QueueSummary", ActiveJobs.Count, FinishedJobs.Count);
+    public string QueueSummary => Text.Format("QueueSummary", ActiveJobs.Count, FinishedJobs.Count + _lastSnapshot.Count(job => job.IsTerminal && job.Request.Simulation == false));
     public string LanguageMessage => _languageNotice is { } key ? Text.Get(key) : "";
     public string ThemeMessage => _themeNotice is { } key ? Text.Get(key) : "";
     public string SettingsLoadMessage => _settingsLoadFailed ? Text.Get("SettingsLoadError") : "";
@@ -102,6 +114,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _preferencesLoaded;
     [ObservableProperty] private IReadOnlyList<JobRow> _activeJobs = [];
     [ObservableProperty] private IReadOnlyList<JobRow> _finishedJobs = [];
+    [ObservableProperty] private IReadOnlyList<JobRow> _imageHistory = [];
 
     internal Task InitializeAsync() => _initialization ??= LoadSettingsAsync();
 
@@ -127,6 +140,17 @@ public partial class MainWindowViewModel : ObservableObject
         finally
         {
             PreferencesLoaded = true;
+        }
+        if (_history is not null)
+        {
+            try { _previousHistory = await _history.LoadAsync(); }
+            catch (Exception error)
+            {
+                _historyLoadFailed = true;
+                _startup.Exception("Image history read failed", error);
+                OnPropertyChanged(nameof(HistoryMessage));
+            }
+            RebuildJobRows();
         }
     }
 
@@ -177,6 +201,7 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(LanguageMessage));
         OnPropertyChanged(nameof(ThemeMessage));
         OnPropertyChanged(nameof(SettingsLoadMessage));
+        OnPropertyChanged(nameof(HistoryMessage));
         RebuildJobRows();
     }
 
@@ -223,42 +248,109 @@ public partial class MainWindowViewModel : ObservableObject
         var updated = new Dictionary<Guid, JobRow>();
         foreach (var job in _lastSnapshot)
         {
+            var simulation = job.Request.Simulation != false;
             if (!_jobRows.TryGetValue(job.Id, out var row))
-                row = new(job.Id, $"{Path.GetFileName(job.Request.InputPath)} → {job.Request.Target.Extension.ToUpperInvariant()}",
-                    new RelayCommand(() => _queue.Cancel(job.Id)));
+                row = new(job.Id, Title(job.Request.InputPath, job.Request.Target.Extension), new RelayCommand(() => _queue.Cancel(job.Id)));
 
-            row.Status = Text.Get(job.Status switch
-            {
-                ConversionStatus.Queued => "JobQueued",
-                ConversionStatus.Running => "JobRunning",
-                ConversionStatus.Completed => "JobCompleted",
-                ConversionStatus.Failed => "JobFailed",
-                ConversionStatus.Cancelled => "JobCancelled",
-                _ => "TextUnavailable"
-            });
+            row.Status = StatusText(job.Status, simulation);
             row.Percent = job.Percent;
             row.CancelLabel = Text.CancelJob;
-            row.Message = job.Status == ConversionStatus.Failed ? Text.Get("JobFailedMessage") : "";
+            row.CanCancel = !job.IsTerminal && job.CanCancel;
+            row.Indeterminate = !simulation && job.Status == ConversionStatus.Running;
+            row.Mode = Text.Get(simulation ? "SimulationMode" : "ImageMode");
+            row.Message = job.Status == ConversionStatus.Failed ? FailureText(job.Error, simulation) : "";
             updated.Add(job.Id, row);
         }
         _jobRows = updated;
         var active = _lastSnapshot.Where(job => !job.IsTerminal).Select(job => _jobRows[job.Id]).ToArray();
-        var finished = _lastSnapshot.Where(job => job.IsTerminal).Select(job => _jobRows[job.Id]).ToArray();
+        var finished = _lastSnapshot.Where(job => job.IsTerminal && job.Request.Simulation != false)
+            .Select(job => _jobRows[job.Id]).ToArray();
         if (!ActiveJobs.SequenceEqual(active))
             ActiveJobs = active;
         if (!FinishedJobs.SequenceEqual(finished))
             FinishedJobs = finished;
+
+        var current = _lastSnapshot.Where(job => job.IsTerminal && job.Request.Simulation == false).Select(job =>
+        {
+            var finishedAt = job.FinishedAt!.Value;
+            return new ConversionHistoryEntry(job.Id, job.Request.InputPath, job.Request.Target.Extension,
+                job.Result?.OutputPath, job.Status, job.Error, finishedAt, finishedAt - (job.StartedAt ?? finishedAt));
+        });
+        var entries = current.Concat(_previousHistory).DistinctBy(job => job.Id)
+            .OrderByDescending(job => job.FinishedAt).Take(256).ToArray();
+        if (!_lastHistory.SequenceEqual(entries) || !ReferenceEquals(_historyText, Text))
+        {
+            _historyText = Text;
+            _lastHistory = entries;
+            ImageHistory = entries.Select(HistoryRow).ToArray();
+        }
+
         OnPropertyChanged(nameof(QueueSummary));
         OnPropertyChanged(nameof(QueueProgress));
         OnPropertyChanged(nameof(QueueProgressText));
+        OnPropertyChanged(nameof(QueueIndeterminate));
         OnPropertyChanged(nameof(HasJobs));
         OnPropertyChanged(nameof(HasFinishedJobs));
+        OnPropertyChanged(nameof(HasSimulationHistory));
     }
 
-    public bool HasFinishedJobs => FinishedJobs.Count > 0;
+    private UiText? _historyText;
+    private IReadOnlyList<ConversionHistoryEntry> _lastHistory = [];
+
+    private static string Title(string source, string target) => $"{Path.GetFileName(source)} → {target.ToUpperInvariant()}";
+
+    private string StatusText(ConversionStatus status, bool simulation) => Text.Get(status switch
+    {
+        ConversionStatus.Queued => "JobQueued",
+        ConversionStatus.Running => "JobRunning",
+        ConversionStatus.Completed => simulation ? "JobCompleted" : "ImageCompleted",
+        ConversionStatus.Failed => "JobFailed",
+        ConversionStatus.Cancelled => "JobCancelled",
+        ConversionStatus.Skipped => "ImageSkipped",
+        _ => "TextUnavailable"
+    });
+
+    private string FailureText(string? error, bool simulation) =>
+        Text.Get(!simulation && Enum.TryParse<ConversionFailure>(error, out var reason) && Enum.IsDefined(reason)
+            ? "ImageError" + reason : simulation ? "JobFailedMessage" : "ImageErrorEncoding");
+
+    private JobRow HistoryRow(ConversionHistoryEntry entry)
+    {
+        var row = new JobRow(entry.Id, Title(entry.SourcePath, entry.Target), new RelayCommand(() => { }))
+        {
+            Status = StatusText(entry.Status, false),
+            Message = entry.Status == ConversionStatus.Failed ? FailureText(entry.Error, false) : "",
+            Output = entry.OutputPath ?? "",
+            Timing = Text.Format("HistoryTiming", entry.FinishedAt.ToLocalTime(), Math.Max(0, entry.Duration.TotalSeconds)),
+            LocationLabel = Text.OpenLocation
+        };
+        if (entry.Status == ConversionStatus.Completed && entry.OutputPath is { } path)
+            row.OpenLocation = new AsyncRelayCommand(() => OpenLocationAsync(path));
+        return row;
+    }
+
+    private async Task OpenLocationAsync(string path)
+    {
+        try { await Task.Run(() => OutputLocation.Open(path)); }
+        catch (Exception error) when (error is IOException or ArgumentException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        {
+            _locationFailed = true;
+            _startup.Exception("Could not open output folder", error);
+            OnPropertyChanged(nameof(HistoryMessage));
+        }
+    }
+
+    private bool _locationFailed;
+    public string HistoryMessage => _locationFailed ? Text.Get("OpenLocationError")
+        : _historyLoadFailed ? Text.Get("HistoryLoadError") : "";
+    public bool HasSimulationHistory => FinishedJobs.Count > 0;
+    public bool HasFinishedJobs => FinishedJobs.Count > 0 || ImageHistory.Count > 0;
     public bool HasJobs => _lastSnapshot.Count > 0;
+    public bool QueueIndeterminate => _lastSnapshot.Any(job => !job.IsTerminal && job.Request.Simulation == false);
     public int QueueProgress => HasJobs ? (int)_lastSnapshot.Average(job => job.IsTerminal ? 100 : job.Percent) : 0;
-    public string QueueProgressText => Text.Format("QueueProgress", QueueProgress);
+    public string QueueProgressText => QueueIndeterminate
+        ? Text.Format("QueueSettled", _lastSnapshot.Count(job => job.IsTerminal), _lastSnapshot.Count)
+        : Text.Format("QueueProgress", QueueProgress);
 
     internal async Task ShutdownAsync()
     {
