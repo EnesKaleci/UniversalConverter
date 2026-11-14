@@ -13,6 +13,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMilliseconds(150) };
     private bool _closing;
     private bool _closed;
+    private bool _pickerOpen;
 
     public MainWindow() => InitializeComponent();
 
@@ -42,8 +43,9 @@ public partial class MainWindow : Window
 
     private async void OnChooseFiles(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel viewModel)
+        if (DataContext is not MainWindowViewModel { CanEditFiles: true } viewModel || _pickerOpen)
             return;
+        _pickerOpen = true;
         try
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -52,26 +54,97 @@ public partial class MainWindow : Window
                 AllowMultiple = true,
                 FileTypeFilter = [new FilePickerFileType(viewModel.Text.PickerFilter) { Patterns = ["*.png", "*.jpg", "*.webp"] }]
             });
-            viewModel.AddFiles(files.Select(file => file.TryGetLocalPath()).OfType<string>());
+            if (files.Count > 0)
+            {
+                await viewModel.AddFilesAsync(files.Select(file => file.TryGetLocalPath() ?? ""));
+                if (viewModel.IsConvert && viewModel.HasFiles && !_closing)
+                    InputList.Focus();
+            }
         }
         catch (Exception exception)
         {
             viewModel.ReportPickerFailure(exception);
         }
+        finally { _pickerOpen = false; }
+    }
+
+    private async void OnChooseOutputFolder(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { CanEditFiles: true } viewModel || _pickerOpen)
+            return;
+
+        _pickerOpen = true;
+        try
+        {
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = viewModel.Text.ChooseOutputFolder,
+                AllowMultiple = false
+            });
+            if (folders.Count > 0)
+                await viewModel.SelectOutputFolderAsync(folders[0].TryGetLocalPath() ?? "");
+        }
+        catch (Exception exception)
+        {
+            viewModel.ReportPickerFailure(exception);
+        }
+        finally { _pickerOpen = false; }
+    }
+
+    private void OnFileSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (RemoveSelectedButton is not null)
+            RemoveSelectedButton.IsEnabled = InputList.SelectedItems is { Count: > 0 };
+    }
+
+    private async void OnRemoveSelected(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        await RemoveSelectionAsync();
+
+    private async void OnFileListKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Delete)
+            return;
+
+        e.Handled = true;
+        await RemoveSelectionAsync();
+    }
+
+    private async Task RemoveSelectionAsync()
+    {
+        if (DataContext is MainWindowViewModel { CanEditFiles: true } viewModel)
+        {
+            await viewModel.RemoveSelectedFilesCommand.ExecuteAsync(InputList.SelectedItems);
+            if (_closing)
+                return;
+            if (viewModel.HasFiles)
+                InputList.Focus();
+            else
+                ChooseFilesButton.Focus();
+        }
+    }
+
+    private void OnClearFiles(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel { CanEditFiles: true } viewModel)
+        {
+            viewModel.ClearFilesCommand.Execute(null);
+            ChooseFilesButton.Focus();
+        }
     }
 
     private void OnDragOver(object? sender, DragEventArgs e)
     {
-        e.DragEffects &= e.DataTransfer.Contains(DataFormat.File) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.DragEffects &= DataContext is MainWindowViewModel { CanEditFiles: true } && !_pickerOpen &&
+            e.DataTransfer.Contains(DataFormat.File) ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
     }
 
-    private void OnDrop(object? sender, DragEventArgs e)
+    private async void OnDrop(object? sender, DragEventArgs e)
     {
         var items = e.DataTransfer.TryGetFiles();
-        if (items is not null && DataContext is MainWindowViewModel viewModel)
-            viewModel.AddFiles(items.OfType<IStorageFile>().Select(file => file.TryGetLocalPath()).OfType<string>());
         e.Handled = true;
+        if (items is not null && !_pickerOpen && DataContext is MainWindowViewModel { CanEditFiles: true } viewModel)
+            await viewModel.AddFilesAsync(items.Select(file => file.TryGetLocalPath() ?? ""));
     }
 
     private async void OnClosing(WindowClosingEventArgs e, MainWindowViewModel viewModel, IHost host)

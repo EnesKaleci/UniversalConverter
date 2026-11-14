@@ -72,4 +72,38 @@
   <data name="DiagnosticsPassed" xml:space="preserve"><value>Tanılama başarılı.</value></data>
   <data name="DiagnosticsFailed" xml:space="preserve"><value>Tanılama başarısız.</value></data>
   <data name="TextUnavailable" xml:space="preserve"><value>Metin kullanılamıyor.</value></data>
+  <data name="FilesEmpty" xml:space="preserve"><value>Başlamak için PNG, JPG veya WebP dosyaları ekle.</value></data>
+  <data name="FileList" xml:space="preserve"><value>Kaynak dosyalar</value></data>
+  <data name="FileSummary" xml:space="preserve"><value>{0} dosya · toplam {1}</value></data>
+  <data name="SizeBytes" xml:space="preserve"><value>{0:N0} B</value></data>
+  <data name="SizeKiB" xml:space="preserve"><value>{0:0.##} KiB</value></data>
+  <data name="SizeMiB" xml:space="preserve"><value>{0:0.##} MiB</value></data>
+  <data name="SizeGiB" xml:space="preserve"><value>{0:0.##} GiB</value></data>
+  <data name="RemoveSelected" xml:space="preserve"><value>Seçilenleri kaldır</value></data>
+  <data name="CollisionPolicy" xml:space="preserve"><value>Ad çakışmaları</value></data>
+  <data name="CollisionRename" xml:space="preserve"><value>Yeniden adlandır</value></data>
+  <data name="CollisionSkip" xml:space="preserve"><value>Atla</value></data>
+  <data name="OutputFolder" xml:space="preserve"><value>Hedef klasör</value></data>
+  <data name="ChooseOutputFolder" xml:space="preserve"><value>Hedef klasör seç</value></data>
+  <data name="ResetOutputFolder" xml:space="preserve"><value>Kaynak klasörleri kullan</value></data>
+  <data name="UseSourceFolders" xml:space="preserve"><value>Her dosyanın kendi klasörü</value></data>
+  <data name="OutputPreview" xml:space="preserve"><value>Çıktı önizlemesi · {0}</value></data>
+  <data name="OutputPairUnsupported" xml:space="preserve"><value>Farklı bir hedef format seç.</value></data>
+  <data name="OutputSourceUnavailable" xml:space="preserve"><value>Kaynak dosya bulunamadı veya okunamıyor.</value></data>
+  <data name="OutputInvalidFolder" xml:space="preserve"><value>Mevcut bir hedef klasör seç.</value></data>
+  <data name="OutputUnwritableFolder" xml:space="preserve"><value>Bu klasöre yazma iznin yok.</value></data>
+  <data name="OutputConflict" xml:space="preserve"><value>Çıktı adı kullanımda olduğu için atlandı.</value></data>
+  <data name="OutputUnavailable" xml:space="preserve"><value>Güvenli bir çıktı adı belirlenemedi.</value></data>
+  <data name="OutputSaveFailed" xml:space="preserve"><value>Klasör ayarlara kaydedilemedi.</value></data>
+  <data name="InputDuplicate" xml:space="preserve"><value>{0} yinelenen dosya atlandı.</value></data>
+  <data name="InputUnsupported" xml:space="preserve"><value>Desteklenmeyen {0} dosya atlandı.</value></data>
+  <data name="InputAccessDenied" xml:space="preserve"><value>{0} dosya okunamadı.</value></data>
+  <data name="InputLimit" xml:space="preserve"><value>{0} dosya liste sınırını aştı.</value></data>
+  <data name="RefreshPreview" xml:space="preserve"><value>Önizlemeyi yenile</value></data>
+  <data name="PreparingFiles" xml:space="preserve"><value>Dosyalar ve çıktı adları kontrol ediliyor…</value></data>
+  <data name="QueueEmpty" xml:space="preserve"><value>Bekleyen ve çalışan işler burada görünecek.</value></data>
+  <data name="HistoryEmpty" xml:space="preserve"><value>Sonuçlanan işler burada görünecek.</value></data>
+  <data name="QueueProgress" xml:space="preserve"><value>Toplam ilerleme · %{0}</value></data>
+  <data name="JobFailedMessage" xml:space="preserve"><value>Simülasyon tamamlanamadı.</value></data>
+  <data name="InputMissingCount" xml:space="preserve"><value>{0} dosya bulunamadı.</value></data>
 </root>

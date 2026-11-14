@@ -2,7 +2,7 @@ name: Windows trusted distribution
 
 on:
   push:
-    branches: [main, 'codex/m1-s-trusted-distribution']
+    branches: [main, 'codex/m1-s-trusted-distribution', 'codex/m1-2-file-management']
     tags: ['v*']
 
 permissions:
@@ -56,6 +56,11 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'The release commit must be in reviewed main history.' }
             $version = $env:GITHUB_REF_NAME.Substring(1)
           }
+          if ($env:GITHUB_REF_NAME -eq 'codex/m1-2-file-management') {
+            $env:ARTIFACT_NAME = 'UniversalConverter-M1.2-Windows-x64-SingleFile-Unsigned-Development-Test'
+          }
+          "ARTIFACT_NAME=$env:ARTIFACT_NAME" >> $env:GITHUB_ENV
+          "package_name=$env:ARTIFACT_NAME" >> $env:GITHUB_OUTPUT
           "version=$version" >> $env:GITHUB_OUTPUT
           "commit=$commit" >> $env:GITHUB_OUTPUT
           "PACKAGE_TEST_ROOT=$(Join-Path $env:RUNNER_TEMP 'converter-windows-release-smoke')" >> $env:GITHUB_ENV
@@ -98,7 +103,7 @@ jobs:
               $exe.VersionInfo.ProductVersion -cne $env:RELEASE_VERSION) {
             throw 'Packaged EXE metadata does not match the release build.'
           }
-          & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1
+          & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1 -FileManagement
           if ($LASTEXITCODE -ne 0) { throw 'Windows localization smoke test failed.' }
           $zip = "artifacts/$($env:ARTIFACT_NAME).zip"
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
@@ -135,10 +140,10 @@ jobs:
         id: upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.ARTIFACT_NAME }}-${{ github.run_attempt }}
+          name: ${{ steps.source.outputs.package_name }}-${{ github.run_attempt }}
           path: |
-            artifacts/${{ env.ARTIFACT_NAME }}.zip
-            artifacts/${{ env.ARTIFACT_NAME }}.zip.sha256
+            artifacts/${{ steps.source.outputs.package_name }}.zip
+            artifacts/${{ steps.source.outputs.package_name }}.zip.sha256
             artifacts/native-authenticode.csv
           if-no-files-found: error
           compression-level: 0
