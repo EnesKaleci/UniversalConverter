@@ -72,4 +72,38 @@
   <data name="DiagnosticsPassed" xml:space="preserve"><value>Diagnostics PASS.</value></data>
   <data name="DiagnosticsFailed" xml:space="preserve"><value>Diagnostics FAIL.</value></data>
   <data name="TextUnavailable" xml:space="preserve"><value>Text unavailable.</value></data>
+  <data name="FilesEmpty" xml:space="preserve"><value>Add PNG, JPG or WebP files to start.</value></data>
+  <data name="FileList" xml:space="preserve"><value>Source files</value></data>
+  <data name="FileSummary" xml:space="preserve"><value>{0} files · {1} total</value></data>
+  <data name="SizeBytes" xml:space="preserve"><value>{0:N0} B</value></data>
+  <data name="SizeKiB" xml:space="preserve"><value>{0:0.##} KiB</value></data>
+  <data name="SizeMiB" xml:space="preserve"><value>{0:0.##} MiB</value></data>
+  <data name="SizeGiB" xml:space="preserve"><value>{0:0.##} GiB</value></data>
+  <data name="RemoveSelected" xml:space="preserve"><value>Remove selected</value></data>
+  <data name="CollisionPolicy" xml:space="preserve"><value>Name conflicts</value></data>
+  <data name="CollisionRename" xml:space="preserve"><value>Rename</value></data>
+  <data name="CollisionSkip" xml:space="preserve"><value>Skip</value></data>
+  <data name="OutputFolder" xml:space="preserve"><value>Output folder</value></data>
+  <data name="ChooseOutputFolder" xml:space="preserve"><value>Choose output folder</value></data>
+  <data name="ResetOutputFolder" xml:space="preserve"><value>Use source folders</value></data>
+  <data name="UseSourceFolders" xml:space="preserve"><value>Each file’s source folder</value></data>
+  <data name="OutputPreview" xml:space="preserve"><value>Output preview · {0}</value></data>
+  <data name="OutputPairUnsupported" xml:space="preserve"><value>Choose a different target format.</value></data>
+  <data name="OutputSourceUnavailable" xml:space="preserve"><value>The source is missing or cannot be read.</value></data>
+  <data name="OutputInvalidFolder" xml:space="preserve"><value>Choose an existing output folder.</value></data>
+  <data name="OutputUnwritableFolder" xml:space="preserve"><value>You don’t have permission to write to this folder.</value></data>
+  <data name="OutputConflict" xml:space="preserve"><value>Skipped because the output name is in use.</value></data>
+  <data name="OutputUnavailable" xml:space="preserve"><value>A safe output name could not be determined.</value></data>
+  <data name="OutputSaveFailed" xml:space="preserve"><value>The folder could not be saved in settings.</value></data>
+  <data name="InputDuplicate" xml:space="preserve"><value>{0} duplicate file(s) skipped.</value></data>
+  <data name="InputUnsupported" xml:space="preserve"><value>{0} unsupported file(s) skipped.</value></data>
+  <data name="InputAccessDenied" xml:space="preserve"><value>{0} file(s) could not be read.</value></data>
+  <data name="InputLimit" xml:space="preserve"><value>{0} file(s) exceeded the list limit.</value></data>
+  <data name="RefreshPreview" xml:space="preserve"><value>Refresh preview</value></data>
+  <data name="PreparingFiles" xml:space="preserve"><value>Checking files and output names…</value></data>
+  <data name="QueueEmpty" xml:space="preserve"><value>Queued and running jobs will appear here.</value></data>
+  <data name="HistoryEmpty" xml:space="preserve"><value>Finished jobs will appear here.</value></data>
+  <data name="QueueProgress" xml:space="preserve"><value>Overall progress · {0}%</value></data>
+  <data name="JobFailedMessage" xml:space="preserve"><value>The simulation could not complete.</value></data>
+  <data name="InputMissingCount" xml:space="preserve"><value>{0} file(s) could not be found.</value></data>
 </root>

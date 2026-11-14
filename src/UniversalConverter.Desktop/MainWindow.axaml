@@ -3,7 +3,7 @@
         xmlns:local="using:UniversalConverter.Desktop"
         x:Class="UniversalConverter.Desktop.MainWindow"
         x:DataType="local:MainWindowViewModel"
-        Title="{Binding Text.AppName}" Width="1060" Height="700" MinWidth="740" MinHeight="540">
+        Title="{Binding Text.AppName}" Width="1060" Height="760" MinWidth="740" MinHeight="540">
   <Window.Styles>
     <Style Selector="TextBlock.title">
       <Setter Property="FontSize" Value="34" />
@@ -58,25 +58,80 @@
               <StackPanel Spacing="12">
                 <TextBlock Text="{Binding Text.DropTitle}" FontSize="20" FontWeight="SemiBold" />
                 <TextBlock Classes="secondary" Text="{Binding Text.SupportedImages}" />
-                <Button AutomationProperties.AutomationId="ChooseFiles" Content="{Binding Text.ChooseFiles}" Click="OnChooseFiles" />
+                <Button x:Name="ChooseFilesButton" AutomationProperties.AutomationId="ChooseFiles" Content="{Binding Text.ChooseFiles}" Click="OnChooseFiles" IsEnabled="{Binding CanEditFiles}" />
               </StackPanel>
             </Border>
-            <ListBox AutomationProperties.AutomationId="InputFiles" ItemsSource="{Binding InputFiles}" MaxHeight="180" />
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <ComboBox AutomationProperties.Name="{Binding Text.TargetFormat}" ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="local:TargetOption">
-                    <TextBlock Text="{Binding Label}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-              <Button Classes="accent" AutomationProperties.AutomationId="QueueSimulation" Content="{Binding Text.QueueSimulation}" Command="{Binding QueueSimulationCommand}" />
-              <Button Content="{Binding Text.ClearFiles}" Command="{Binding ClearFilesCommand}" />
-            </StackPanel>
+            <TextBlock AutomationProperties.AutomationId="FileSummary" Text="{Binding FileSummary}" />
+            <TextBlock Classes="secondary" IsVisible="{Binding !HasFiles}" Text="{Binding Text.FilesEmpty}" />
+            <ListBox x:Name="InputList" AutomationProperties.AutomationId="InputFiles"
+                     AutomationProperties.Name="{Binding Text.FileList}"
+                     ItemsSource="{Binding FileRows}" SelectionMode="Multiple" MaxHeight="280"
+                     IsEnabled="{Binding CanEditFiles}" KeyDown="OnFileListKeyDown"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="local:FileRow">
+                  <StackPanel Spacing="2" Margin="0,4" ToolTip.Tip="{Binding Path}">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="secondary" TextWrapping="NoWrap" Text="{Binding Metadata}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="secondary" TextWrapping="NoWrap" Text="{Binding Path}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="secondary" TextWrapping="NoWrap" Text="{Binding Preview}" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding OutputPath}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <WrapPanel ItemSpacing="8" LineSpacing="8" IsEnabled="{Binding CanEditFiles}" IsVisible="{Binding HasFiles}">
+              <Button AutomationProperties.AutomationId="RemoveSelected" Content="{Binding Text.RemoveSelected}" Click="OnRemoveSelected" />
+              <Button AutomationProperties.AutomationId="ClearFiles" Content="{Binding Text.ClearFiles}" Click="OnClearFiles" />
+            </WrapPanel>
+            <Border Classes="panel" Padding="16" IsEnabled="{Binding CanEditFiles}">
+              <StackPanel Spacing="10">
+                <WrapPanel ItemSpacing="12" LineSpacing="8">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Text.TargetFormat}" />
+                    <ComboBox AutomationProperties.AutomationId="TargetFormatPicker" AutomationProperties.Name="{Binding Text.TargetFormat}"
+                              ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="local:TargetOption">
+                          <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </StackPanel>
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Text.CollisionPolicy}" />
+                    <ComboBox AutomationProperties.AutomationId="CollisionPolicyPicker"
+                              AutomationProperties.Name="{Binding Text.CollisionPolicy}" SelectedIndex="{Binding CollisionIndex, Mode=TwoWay}">
+                      <ComboBoxItem Content="{Binding Text.CollisionRename}" />
+                      <ComboBoxItem Content="{Binding Text.CollisionSkip}" />
+                    </ComboBox>
+                  </StackPanel>
+                </WrapPanel>
+                <TextBlock Text="{Binding Text.OutputFolder}" />
+                <TextBlock AutomationProperties.AutomationId="OutputFolderPath" Text="{Binding DestinationLabel}" TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{Binding DestinationLabel}" />
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                  <Button AutomationProperties.AutomationId="ChooseOutputFolder" Content="{Binding Text.ChooseOutputFolder}" Click="OnChooseOutputFolder" />
+                  <Button Content="{Binding Text.ResetOutputFolder}" Command="{Binding UseSourceFoldersCommand}" IsVisible="{Binding HasCustomFolder}" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+            <WrapPanel ItemSpacing="8" LineSpacing="8">
+              <Button Classes="accent" AutomationProperties.AutomationId="QueueSimulation" Content="{Binding Text.QueueSimulation}"
+                      Command="{Binding QueueSimulationCommand}" IsEnabled="{Binding CanQueueFiles}" />
+              <Button Content="{Binding Text.RefreshPreview}" Command="{Binding RefreshPreviewCommand}"
+                      IsEnabled="{Binding CanEditFiles}" IsVisible="{Binding HasFiles}" />
+            </WrapPanel>
+            <TextBlock Classes="secondary" Text="{Binding Text.PreparingFiles}" IsVisible="{Binding IsPreparing}" />
             <TextBlock Classes="secondary" AutomationProperties.AutomationId="InputMessage" Text="{Binding InputMessage}" />
           </StackPanel>
           <StackPanel IsVisible="{Binding IsQueue}" Spacing="12">
             <TextBlock Classes="secondary" Text="{Binding QueueSummary}" />
+            <TextBlock Classes="secondary" Text="{Binding Text.QueueEmpty}" IsVisible="{Binding !HasJobs}" />
+            <StackPanel Spacing="5" IsVisible="{Binding HasJobs}">
+              <TextBlock Text="{Binding QueueProgressText}" />
+              <ProgressBar Minimum="0" Maximum="100" Value="{Binding QueueProgress}" AutomationProperties.Name="{Binding QueueProgressText}" />
+            </StackPanel>
             <ItemsControl AutomationProperties.AutomationId="ActiveJobs" ItemsSource="{Binding ActiveJobs}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="local:JobRow">
@@ -96,6 +151,7 @@
           </StackPanel>
           <StackPanel IsVisible="{Binding IsHistory}" Spacing="12">
             <TextBlock Classes="secondary" Text="{Binding Text.HistoryNote}" />
+            <TextBlock Classes="secondary" Text="{Binding Text.HistoryEmpty}" IsVisible="{Binding !HasFinishedJobs}" />
             <ItemsControl AutomationProperties.AutomationId="FinishedJobs" ItemsSource="{Binding FinishedJobs}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="local:JobRow">
@@ -103,6 +159,7 @@
                     <StackPanel Spacing="6">
                       <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
                       <TextBlock Classes="secondary" Text="{Binding Status}" />
+                      <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </DataTemplate>

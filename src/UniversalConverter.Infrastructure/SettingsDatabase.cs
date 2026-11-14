@@ -6,7 +6,7 @@ using UniversalConverter.Contracts;
 
 namespace UniversalConverter.Infrastructure;
 
-public sealed class SettingsDatabase : ISettingsStore
+public sealed class SettingsDatabase : ISettingsStore, IOutputPreferences
 {
     private readonly string _directory;
     private readonly string _connectionString;
@@ -58,6 +58,12 @@ public sealed class SettingsDatabase : ISettingsStore
         ArgumentException.ThrowIfNullOrWhiteSpace(languageTag);
         return WriteAsync("language", languageTag, cancellationToken);
     }
+
+    public Task<string?> LoadOutputDirectoryAsync(CancellationToken cancellationToken = default) =>
+        ReadAsync("outputDirectory", cancellationToken);
+
+    public Task SaveOutputDirectoryAsync(string? path, CancellationToken cancellationToken = default) =>
+        WriteAsync("outputDirectory", path ?? string.Empty, cancellationToken);
 
     private Task<string?> ReadAsync(string key, CancellationToken cancellationToken) =>
         RunAsync(connection =>

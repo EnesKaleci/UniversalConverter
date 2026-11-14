@@ -52,6 +52,20 @@ public sealed class UiText
     public string SaveTheme => Get(nameof(SaveTheme));
     public string AboutDescription => Get(nameof(AboutDescription));
 
+    public string FilesEmpty => Get(nameof(FilesEmpty));
+    public string FileList => Get(nameof(FileList));
+    public string RemoveSelected => Get(nameof(RemoveSelected));
+    public string CollisionPolicy => Get(nameof(CollisionPolicy));
+    public string CollisionRename => Get(nameof(CollisionRename));
+    public string CollisionSkip => Get(nameof(CollisionSkip));
+    public string OutputFolder => Get(nameof(OutputFolder));
+    public string ChooseOutputFolder => Get(nameof(ChooseOutputFolder));
+    public string ResetOutputFolder => Get(nameof(ResetOutputFolder));
+    public string RefreshPreview => Get(nameof(RefreshPreview));
+    public string PreparingFiles => Get(nameof(PreparingFiles));
+    public string QueueEmpty => Get(nameof(QueueEmpty));
+    public string HistoryEmpty => Get(nameof(HistoryEmpty));
+
     internal string Get(string key) =>
         Read(key, Culture) ?? Read(key, CultureInfo.InvariantCulture) ??
         Read("TextUnavailable", CultureInfo.InvariantCulture) ?? "Text unavailable.";

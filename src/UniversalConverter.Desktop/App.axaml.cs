@@ -40,7 +40,11 @@ public partial class App : Avalonia.Application
                     rollingInterval: RollingInterval.Day, fileSizeLimitBytes: 2_000_000,
                     rollOnFileSizeLimit: true, retainedFileCountLimit: 5);
         });
-        builder.Services.AddSingleton<ISettingsStore>(_ => new SettingsDatabase(Path.Combine(Program.DataDirectory, "settings.db")));
+        builder.Services.AddSingleton(_ => new SettingsDatabase(Path.Combine(Program.DataDirectory, "settings.db")));
+        builder.Services.AddSingleton<ISettingsStore>(services => services.GetRequiredService<SettingsDatabase>());
+        builder.Services.AddSingleton<IOutputPreferences>(services => services.GetRequiredService<SettingsDatabase>());
+        builder.Services.AddSingleton<IFileCatalog, LocalFileCatalog>();
+        builder.Services.AddSingleton<FilePreparation>();
         builder.Services.AddSingleton<IConverterEngine, SimulationEngine>();
         builder.Services.AddSingleton<IConversionEngineRegistry, ConversionEngineRegistry>();
         builder.Services.AddSingleton<IFormatDetector>(_ => new ExtensionFormatDetector(SimulationEngine.Formats));
@@ -52,6 +56,8 @@ public partial class App : Avalonia.Application
         builder.Services.AddSingleton(services => new MainWindowViewModel(
             services.GetRequiredService<ConversionQueueService>(),
             services.GetRequiredService<ISettingsStore>(),
+            services.GetRequiredService<IOutputPreferences>(),
+            services.GetRequiredService<FilePreparation>(),
             services.GetRequiredService<UiLocalization>(),
             services.GetRequiredService<StartupLog>(),
             services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MainWindowViewModel>>()));

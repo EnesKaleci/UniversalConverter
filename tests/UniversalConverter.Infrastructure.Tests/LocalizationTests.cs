@@ -86,7 +86,7 @@ public sealed class LocalizationTests
         await using var queue = CreateQueue(new SimulationEngine());
         var model = CreateViewModel(queue, database, workspace, "en-US");
         await model.InitializeAsync();
-        model.AddFiles([Path.Combine(workspace.DirectoryPath, "girdi.txt")]);
+        await model.AddFilesAsync([Path.Combine(workspace.DirectoryPath, "girdi.txt")]);
         Assert.Contains("unsupported", model.InputMessage);
 
         var notifications = new List<string?>();
@@ -154,14 +154,14 @@ public sealed class LocalizationTests
         var model = CreateViewModel(queue, database, workspace, "tr-TR");
         await model.InitializeAsync();
 
-        model.AddFiles([path, path]);
-        Assert.Equal(path, Assert.Single(model.InputFiles));
+        await model.AddFilesAsync([path, path]);
+        Assert.Equal(path, Assert.Single(model.FileRows).Path);
         Assert.Contains("yinelenen", model.InputMessage);
         await model.QueueSimulationCommand.ExecuteAsync(null);
         var acceptedPath = await engine.Input.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal(path, acceptedPath);
         Assert.Equal(path, Assert.Single(queue.Snapshot()).Request.InputPath);
-        Assert.Empty(model.InputFiles);
+        Assert.Empty(model.FileRows);
         model.Refresh();
 
         var active = Assert.Single(model.ActiveJobs);
@@ -186,7 +186,9 @@ public sealed class LocalizationTests
 
     private static MainWindowViewModel CreateViewModel(ConversionQueueService queue, ISettingsStore settings,
         TemporaryWorkspace workspace, string systemLanguage) =>
-        new(queue, settings, new UiLocalization(CultureInfo.GetCultureInfo(systemLanguage)),
+        new(queue, settings, settings as IOutputPreferences ?? new SettingsDatabase(Path.Combine(workspace.DirectoryPath, "settings.db")),
+            new FilePreparation(new LocalFileCatalog(), new ExtensionFormatDetector(SimulationEngine.Formats),
+                new ConversionEngineRegistry([new SimulationEngine()])), new UiLocalization(CultureInfo.GetCultureInfo(systemLanguage)),
             new StartupLog(workspace.DirectoryPath, null), NullLogger<MainWindowViewModel>.Instance);
 
     private sealed class PausedFirstLanguageWrite(SettingsDatabase database) : ISettingsStore

@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,13 +10,12 @@ using UniversalConverter.Infrastructure;
 namespace UniversalConverter.Desktop;
 
 public sealed record TargetOption(string Label, FileFormat Format);
-public sealed record JobRow(string Title, string Status, int Percent, string CancelLabel, ICommand Cancel);
+public sealed record JobRow(string Title, string Status, int Percent, string CancelLabel, ICommand Cancel, string Message);
 
 public partial class MainWindowViewModel : ObservableObject
 {
     private enum Page { Dashboard, Convert, Queue, History, Settings, About }
 
-    private const int FileLimit = 128;
     private readonly ConversionQueueService _queue;
     private readonly ISettingsStore _settings;
     private readonly UiLocalization _localization;
@@ -29,16 +27,18 @@ public partial class MainWindowViewModel : ObservableObject
     private int _languageSaveRevision;
     private bool _stopping;
 
-    private (string Key, object[] Arguments, string? DetailKey)? _inputNotice;
     private string? _languageNotice;
     private string? _themeNotice;
     private bool _settingsLoadFailed;
 
-    internal MainWindowViewModel(ConversionQueueService queue, ISettingsStore settings, UiLocalization localization,
+    internal MainWindowViewModel(ConversionQueueService queue, ISettingsStore settings, IOutputPreferences outputPreferences,
+        FilePreparation preparation, UiLocalization localization,
         StartupLog startup, ILogger<MainWindowViewModel> logger)
     {
         _queue = queue;
         _settings = settings;
+        _outputPreferences = outputPreferences;
+        _preparation = preparation;
         _localization = localization;
         _startup = startup;
         _logger = logger;
@@ -49,7 +49,6 @@ public partial class MainWindowViewModel : ObservableObject
     public UiText Text => _localization.Text;
     public IReadOnlyList<TargetOption> Targets { get; } =
         [new("JPG", SimulationEngine.Jpeg), new("PNG", SimulationEngine.Png), new("WebP", SimulationEngine.WebP)];
-    public ObservableCollection<string> InputFiles { get; } = [];
 
     private Page SelectedPage => (Page)SelectedPageIndex;
     public string PageTitle => Text.Get(SelectedPage.ToString());
@@ -69,9 +68,6 @@ public partial class MainWindowViewModel : ObservableObject
     public string LanguageMessage => _languageNotice is { } key ? Text.Get(key) : "";
     public string ThemeMessage => _themeNotice is { } key ? Text.Get(key) : "";
     public string SettingsLoadMessage => _settingsLoadFailed ? Text.Get("SettingsLoadError") : "";
-    public string InputMessage => _inputNotice is { } notice
-        ? Text.Format(notice.Key, notice.DetailKey is { } detail ? [.. notice.Arguments, Text.Get(detail)] : notice.Arguments)
-        : "";
 
     public event Action<ThemePreference>? ThemeChanged;
 
@@ -86,6 +82,10 @@ public partial class MainWindowViewModel : ObservableObject
     private int _selectedPageIndex;
 
     [ObservableProperty] private TargetOption? _selectedTarget;
+    [ObservableProperty] private bool _isPreparing;
+    [ObservableProperty] private string? _outputDirectory;
+    [ObservableProperty] private int _collisionIndex;
+    [ObservableProperty] private IReadOnlyList<FileRow> _fileRows = [];
     [ObservableProperty] private int _themeIndex;
     [ObservableProperty] private int _languageIndex;
     [ObservableProperty] private bool _preferencesLoaded;
@@ -101,6 +101,8 @@ public partial class MainWindowViewModel : ObservableObject
             ApplyLanguage(await _settings.LoadLanguageAsync());
             LanguageIndex = Text.Culture.Name == UiText.Turkish ? 1 : 0;
             ThemeIndex = (int)await _settings.LoadThemeAsync();
+            var directory = await _outputPreferences.LoadOutputDirectoryAsync();
+            OutputDirectory = string.IsNullOrWhiteSpace(directory) ? null : directory;
             _startup.Write("SQLite settings initialized");
             _logger.LogInformation("Universal Converter started on {Platform}", PlatformDetection.Current);
         }
@@ -160,104 +162,15 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(Text));
         OnPropertyChanged(nameof(PageTitle));
         OnPropertyChanged(nameof(Platform));
-        OnPropertyChanged(nameof(InputMessage));
+        NotifyFileState();
         OnPropertyChanged(nameof(LanguageMessage));
         OnPropertyChanged(nameof(ThemeMessage));
         OnPropertyChanged(nameof(SettingsLoadMessage));
         RebuildJobRows();
     }
 
-    public void AddFiles(IEnumerable<string> files)
-    {
-        if (_stopping)
-            return;
-
-        var supported = SimulationEngine.Formats.Select(format => "." + format.Extension)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        var seen = new HashSet<string>(InputFiles, comparer);
-        var rejected = 0;
-        foreach (var file in files)
-        {
-            if (InputFiles.Count >= FileLimit || !supported.Contains(Path.GetExtension(file)) || !seen.Add(file))
-                rejected++;
-            else
-                InputFiles.Add(file);
-        }
-        SetInputNotice(rejected > 0 ? "SkippedFiles" : null, [rejected]);
-    }
-
-    public void ReportPickerFailure(Exception exception)
-    {
-        SetInputNotice("PickerFailure");
-        _startup.Exception("File picker failed", exception);
-        _logger.LogWarning("File picker failed ({ErrorType}).", exception.GetType().Name);
-    }
-
     [RelayCommand]
     private void OpenConvert() => SelectedPageIndex = (int)Page.Convert;
-
-    [RelayCommand]
-    private void ClearFiles()
-    {
-        InputFiles.Clear();
-        SetInputNotice(null);
-    }
-
-    [RelayCommand]
-    private async Task QueueSimulationAsync()
-    {
-        var target = SelectedTarget?.Format;
-        var inputs = InputFiles.ToArray();
-        if (_stopping || target is null || inputs.Length == 0)
-        {
-            SetInputNotice("ChooseInputAndTarget");
-            return;
-        }
-
-        var (accepted, firstError) = await Task.Run(() =>
-        {
-            var queued = new List<string>();
-            string? error = null;
-            foreach (var input in inputs)
-            {
-                try
-                {
-                    _queue.Enqueue(new ConversionRequest(input, target));
-                    queued.Add(input);
-                }
-                catch (Exception exception) when (exception is IOException or ArgumentException or NotSupportedException or InvalidOperationException or UnauthorizedAccessException)
-                {
-                    error ??= exception switch
-                    {
-                        FileNotFoundException => "InputMissing",
-                        NotSupportedException => "PairUnsupported",
-                        ArgumentException => "InvalidRequest",
-                        InvalidOperationException => "QueueUnavailable",
-                        _ => "InputAccessError"
-                    };
-                }
-            }
-            return (queued, error);
-        });
-
-        foreach (var input in accepted)
-            InputFiles.Remove(input);
-        if (firstError is null)
-            SetInputNotice("QueueAccepted", [accepted.Count]);
-        else
-            SetInputNotice("QueuePartiallyAccepted", [accepted.Count, inputs.Length - accepted.Count], firstError);
-
-        Refresh();
-        if (accepted.Count == inputs.Length)
-            SelectedPageIndex = (int)Page.Queue;
-    }
-
-    private void SetInputNotice(string? key, object[]? arguments = null, string? detailKey = null)
-    {
-        _inputNotice = key is null ? null : (key, arguments ?? [], detailKey);
-        OnPropertyChanged(nameof(InputMessage));
-    }
 
     partial void OnThemeIndexChanged(int value)
     {
@@ -299,6 +212,10 @@ public partial class MainWindowViewModel : ObservableObject
         ActiveJobs = _lastSnapshot.Where(job => !job.IsTerminal).Select(ToRow).ToArray();
         FinishedJobs = _lastSnapshot.Where(job => job.IsTerminal).Select(ToRow).ToArray();
         OnPropertyChanged(nameof(QueueSummary));
+        OnPropertyChanged(nameof(QueueProgress));
+        OnPropertyChanged(nameof(QueueProgressText));
+        OnPropertyChanged(nameof(HasJobs));
+        OnPropertyChanged(nameof(HasFinishedJobs));
     }
 
     private JobRow ToRow(ConversionJob job) => new(
@@ -314,18 +231,25 @@ public partial class MainWindowViewModel : ObservableObject
         }),
         job.Percent,
         Text.CancelJob,
-        new RelayCommand(() => _queue.Cancel(job.Id)));
+        new RelayCommand(() => _queue.Cancel(job.Id)),
+        job.Status == ConversionStatus.Failed ? Text.Get("JobFailedMessage") : "");
+
+    public bool HasFinishedJobs => FinishedJobs.Count > 0;
+    public bool HasJobs => _lastSnapshot.Count > 0;
+    public int QueueProgress => HasJobs ? (int)_lastSnapshot.Average(job => job.IsTerminal ? 100 : job.Percent) : 0;
+    public string QueueProgressText => Text.Format("QueueProgress", QueueProgress);
 
     internal async Task ShutdownAsync()
     {
         _stopping = true;
+        await _fileLifetime.CancelAsync();
+        await _fileWork;
+        _fileLifetime.Dispose();
         await _queue.DisposeAsync();
         if (_initialization is { } initialization)
             await initialization;
         await _languageSave;
         if (SaveThemeCommand.ExecutionTask is { } save)
             await save;
-        if (QueueSimulationCommand.ExecutionTask is { } enqueue)
-            await enqueue;
     }
 }
