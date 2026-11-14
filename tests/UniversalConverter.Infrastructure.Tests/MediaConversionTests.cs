@@ -66,6 +66,85 @@ public sealed class MediaConversionTests
         Assert.Empty(Directory.GetFiles(workspace.DirectoryPath, "*.tmp"));
     }
 
+    [PinnedMediaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SilentVideoReportsMissingAudioOrStaysSilent(bool keepVideo)
+    {
+        var tools = Environment.GetEnvironmentVariable("CONVERTER_TEST_MEDIA_TOOLS")!;
+        using var workspace = new TemporaryWorkspace();
+        var source = Path.Combine(workspace.DirectoryPath, "Şüphe Video.mp4");
+        var exe = Path.Combine(tools, "ffmpeg.exe");
+        var runner = new SafeProcessRunner([exe]);
+        var fixture = await runner.RunAsync(new(exe, ["-v", "error", "-nostdin", "-f", "lavfi", "-i",
+            "testsrc2=size=64x48:rate=12:duration=1", "-c:v", "libx264", source],
+            workspace.DirectoryPath, TimeSpan.FromSeconds(30)));
+        Assert.True(fixture.ExitCode == 0, fixture.StandardError);
+        var engine = new MediaConversionEngine(tools);
+        var mp4 = MediaFormats.All.Single(format => format.Format.Extension == "mp4");
+        var sourceInfo = await engine.InspectAsync(source, mp4.Format, default);
+        Assert.Equal("h264", sourceInfo.Video);
+        Assert.Equal(64, sourceInfo.Width);
+        Assert.Null(sourceInfo.Audio);
+        var target = MediaFormats.All.Single(format => format.Format.Extension == (keepVideo ? "webm" : "wav"));
+        var output = Path.ChangeExtension(source, target.Format.Extension);
+        var request = new ConversionRequest(source, target.Format, output, CollisionPolicy: OutputCollisionPolicy.Rename);
+        var progress = new Progress<ConversionProgress>();
+        if (keepVideo)
+        {
+            await engine.ConvertAsync(request, progress, default);
+            var info = await engine.InspectAsync(output, target.Format, default);
+            Assert.Equal("vp9", info.Video);
+            Assert.Null(info.Audio);
+        }
+        else
+        {
+            var error = await Assert.ThrowsAsync<ConversionException>(() => engine.ConvertAsync(request, progress, default));
+            Assert.Equal(ConversionFailure.MediaAudioMissing, error.Reason);
+            Assert.False(File.Exists(output));
+        }
+        Assert.Empty(Directory.GetFiles(workspace.DirectoryPath, "*.tmp"));
+    }
+
+    [PinnedMediaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CommitCancellationAndCollisionLeaveNoTemporaryFile(bool cancel)
+    {
+        var tools = Environment.GetEnvironmentVariable("CONVERTER_TEST_MEDIA_TOOLS")!;
+        using var workspace = new TemporaryWorkspace();
+        var input = Path.Combine(workspace.DirectoryPath, "Çığ.wav");
+        var output = Path.ChangeExtension(input, ".mp3");
+        var exe = Path.Combine(tools, "ffmpeg.exe");
+        var fixture = await new SafeProcessRunner([exe]).RunAsync(new(exe,
+            ["-v", "error", "-f", "lavfi", "-i", "sine=duration=1", input],
+            workspace.DirectoryPath, TimeSpan.FromSeconds(30)));
+        Assert.True(fixture.ExitCode == 0, fixture.StandardError);
+        var target = MediaFormats.All.Single(format => format.Format.Extension == "mp3").Format;
+        var request = new ConversionRequest(input, target, output, CollisionPolicy: OutputCollisionPolicy.Skip);
+        var engine = new MediaConversionEngine(tools);
+        using var stop = new CancellationTokenSource();
+        Task<ConversionResult> Run() => engine.ConvertAsync(request, new Progress<ConversionProgress>(), stop.Token, () =>
+        {
+            if (cancel)
+                stop.Cancel();
+            else
+                File.WriteAllText(output, "Existing file");
+            stop.Token.ThrowIfCancellationRequested();
+        });
+        if (cancel)
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(Run);
+            Assert.False(File.Exists(output));
+        }
+        else
+        {
+            Assert.True((await Run()).IsSkipped);
+            Assert.Equal("Existing file", File.ReadAllText(output));
+        }
+        Assert.Empty(Directory.GetFiles(workspace.DirectoryPath, "*.tmp"));
+    }
+
     [Fact]
     public void MediaCatalogRejectsInvalidPairsAndUsesExplicitMuxers()
     {
