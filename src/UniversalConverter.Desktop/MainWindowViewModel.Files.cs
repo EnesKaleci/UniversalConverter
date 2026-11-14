@@ -126,13 +126,14 @@ public partial class MainWindowViewModel
     }
 
     [RelayCommand]
-    private Task RefreshPreviewAsync() => HasFiles ? RunFileOperationAsync(token => BuildPreviewAsync(token)) : Task.CompletedTask;
+    private Task RefreshPreviewAsync() => HasFiles ? RunFileOperationAsync(token => BuildPreviewAsync(token, recheckInputs: true)) : Task.CompletedTask;
 
     private async Task BuildPreviewAsync(CancellationToken token, bool recheckInputs = false)
     {
         var target = SelectedTarget?.Format;
-        _proposals = target is null ? [] : await _preparation.PlanAsync(_inputs.ToArray(), target,
-            OutputDirectory, (OutputCollisionPolicy)CollisionIndex, token, recheckInputs);
+        _proposals = target is null || !Enum.IsDefined((OutputCollisionPolicy)CollisionIndex) ? []
+            : await _preparation.PlanAsync(_inputs.ToArray(), target, OutputDirectory,
+                (OutputCollisionPolicy)CollisionIndex, token, recheckInputs);
     }
 
     [RelayCommand]
@@ -176,7 +177,7 @@ public partial class MainWindowViewModel
 
         var accepted = queued.ToHashSet();
         _inputs.RemoveAll(accepted.Contains);
-        _proposals = _proposals.Where(proposal => !accepted.Contains(proposal.Input)).ToArray();
+        await BuildPreviewAsync(token);
         _fileNotice = error is null ? ("QueueAccepted", [queued.Count], null) : ("QueuePartiallyAccepted", [queued.Count, eligible.Length - queued.Count], error);
         Refresh();
         if (_inputs.Count == 0 && !_stopping)
@@ -233,8 +234,8 @@ public partial class MainWindowViewModel
     private string FormatSize(decimal bytes) => bytes switch
     {
         >= 1L << 30 => Text.Format("SizeGiB", bytes / (decimal)(1L << 30)),
-        >= 1L << 20 => Text.Format("SizeMiB", bytes / (double)(1L << 20)),
-        >= 1L << 10 => Text.Format("SizeKiB", bytes / (double)(1L << 10)),
+        >= 1L << 20 => Text.Format("SizeMiB", bytes / (decimal)(1L << 20)),
+        >= 1L << 10 => Text.Format("SizeKiB", bytes / (decimal)(1L << 10)),
         _ => Text.Format("SizeBytes", bytes)
     };
 }

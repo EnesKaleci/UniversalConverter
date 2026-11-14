@@ -7,6 +7,12 @@ namespace UniversalConverter.Infrastructure;
 
 public sealed class LocalFileCatalog : IFileCatalog
 {
+    private const uint FileAddFile = 2;
+    private const uint ShareReadWriteDelete = 7;
+    private const uint OpenExisting = 3;
+    private const uint BackupSemantics = 0x02000000;
+    private const int WritableAndSearchable = 3;
+
     public long ReadInputSize(string path)
     {
         if (File.GetAttributes(path).HasFlag(FileAttributes.Directory))
@@ -24,12 +30,12 @@ public sealed class LocalFileCatalog : IFileCatalog
         if (OperatingSystem.IsWindows())
         {
             // FILE_ADD_FILE verifies directory access without creating a probe file.
-            using var handle = CreateFile(path, 2, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero);
+            using var handle = CreateFile(path, FileAddFile, ShareReadWriteDelete, IntPtr.Zero, OpenExisting, BackupSemantics, IntPtr.Zero);
             if (handle.IsInvalid)
                 throw new UnauthorizedAccessException("The directory could not be opened for file creation.",
                     new Win32Exception(Marshal.GetLastPInvokeError()));
         }
-        else if (Access(path, 3) != 0) // W_OK | X_OK
+        else if (Access(path, WritableAndSearchable) != 0)
         {
             throw new UnauthorizedAccessException("The directory is not writable and searchable.");
         }
