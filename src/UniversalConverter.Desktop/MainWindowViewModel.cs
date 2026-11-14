@@ -72,7 +72,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     public UiText Text => _localization.Text;
     public IReadOnlyList<TargetOption> Targets { get; } =
-        [new("JPG", SimulationEngine.Jpeg), new("PNG", SimulationEngine.Png), new("WebP", SimulationEngine.WebP), new("JPEG (.jpeg)", ImageFormats.JpegLong)];
+        [new("JPG", SimulationEngine.Jpeg), new("PNG", SimulationEngine.Png), new("WebP", SimulationEngine.WebP), new("JPEG (.jpeg)", ImageFormats.JpegLong),
+         .. MediaFormats.All.Select(item => new TargetOption(item.Format.Extension.ToUpperInvariant(), item.Format))];
 
     private Page SelectedPage => (Page)SelectedPageIndex;
     public string PageTitle => Text.Get(SelectedPage.ToString());
@@ -258,8 +259,8 @@ public partial class MainWindowViewModel : ObservableObject
             row.Percent = job.Percent;
             row.CancelLabel = Text.CancelJob;
             row.CanCancel = !job.IsTerminal && job.CanCancel;
-            row.Indeterminate = !simulation && job.Status == ConversionStatus.Running;
-            row.Mode = Text.Get(simulation ? "SimulationMode" : "ImageMode");
+            row.Indeterminate = !simulation && job.Status == ConversionStatus.Running && !job.HasMeasuredProgress;
+            row.Mode = Text.Get(simulation ? "SimulationMode" : MediaFormats.Find(job.Request.Target) is null ? "ImageMode" : "MediaMode");
             row.Message = job.Status == ConversionStatus.Failed ? FailureText(job.Error, simulation) : "";
             updated.Add(job.Id, row);
         }
@@ -352,7 +353,7 @@ public partial class MainWindowViewModel : ObservableObject
     public bool HasSimulationHistory => FinishedJobs.Count > 0;
     public bool HasFinishedJobs => FinishedJobs.Count > 0 || ImageHistory.Count > 0;
     public bool HasJobs => _lastSnapshot.Count > 0;
-    public bool QueueIndeterminate => _lastSnapshot.Any(job => !job.IsTerminal && job.Request.Simulation == false);
+    public bool QueueIndeterminate => _lastSnapshot.Any(job => !job.IsTerminal && job.Request.Simulation == false && !job.HasMeasuredProgress);
     public int QueueProgress => HasJobs ? (int)_lastSnapshot.Average(job => job.IsTerminal ? 100 : job.Percent) : 0;
     public string QueueProgressText => QueueIndeterminate
         ? Text.Format("QueueSettled", _lastSnapshot.Count(job => job.IsTerminal), _lastSnapshot.Count)

@@ -74,6 +74,18 @@ public sealed class UiText
     public string SimulationHistory => Get(nameof(SimulationHistory));
     public string OpenLocation => Get(nameof(OpenLocation));
 
+    public string MediaMode => Get(nameof(MediaMode));
+    public string MediaQuality => Get(nameof(MediaQuality));
+    public string MediaLow => Get(nameof(MediaLow));
+    public string MediaStandard => Get(nameof(MediaStandard));
+    public string MediaHigh => Get(nameof(MediaHigh));
+    public string MediaCustom => Get(nameof(MediaCustom));
+    public string MediaBitrate => Get(nameof(MediaBitrate));
+    public string MediaResolution => Get(nameof(MediaResolution));
+    public string MediaFrameRate => Get(nameof(MediaFrameRate));
+    public string MediaSource => Get(nameof(MediaSource));
+    public string MediaQualityNote => Get(nameof(MediaQualityNote));
+
     internal string Get(string key) =>
         Read(key, Culture) ?? Read(key, CultureInfo.InvariantCulture) ??
         Read("TextUnavailable", CultureInfo.InvariantCulture) ?? "Text unavailable.";

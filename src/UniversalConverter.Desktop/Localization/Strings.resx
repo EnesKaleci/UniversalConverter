@@ -109,7 +109,7 @@
   <data name="ImageBanner" xml:space="preserve"><value>Convert PNG, JPEG and WebP. Simulation runs without creating files.</value></data>
   <data name="ImageQuality" xml:space="preserve"><value>JPEG / WebP quality</value></data>
   <data name="JpegWhiteBackground" xml:space="preserve"><value>JPEG has no transparency. Transparent areas become white.</value></data>
-  <data name="ConvertImages" xml:space="preserve"><value>Convert images</value></data>
+  <data name="ConvertImages" xml:space="preserve"><value>Convert</value></data>
   <data name="ImageHistory" xml:space="preserve"><value>Image conversions</value></data>
   <data name="SimulationHistory" xml:space="preserve"><value>Simulations in this session</value></data>
   <data name="SimulationMode" xml:space="preserve"><value>Simulation</value></data>
@@ -129,4 +129,20 @@
   <data name="ImageErrorOutputAccess" xml:space="preserve"><value>The destination could not be written. Check the location and permissions.</value></data>
   <data name="ImageErrorEncoding" xml:space="preserve"><value>The image could not be encoded or verified.</value></data>
   <data name="ImageErrorDiskFull" xml:space="preserve"><value>The destination ran out of disk space.</value></data>
+  <data name="MediaMode" xml:space="preserve"><value>Media conversion</value></data>
+  <data name="MediaQuality" xml:space="preserve"><value>Quality profile</value></data>
+  <data name="MediaLow" xml:space="preserve"><value>Low</value></data>
+  <data name="MediaStandard" xml:space="preserve"><value>Standard</value></data>
+  <data name="MediaHigh" xml:space="preserve"><value>High</value></data>
+  <data name="MediaCustom" xml:space="preserve"><value>Custom audio bitrate</value></data>
+  <data name="MediaBitrate" xml:space="preserve"><value>Audio bitrate (kbps)</value></data>
+  <data name="MediaResolution" xml:space="preserve"><value>Maximum height (pixels)</value></data>
+  <data name="MediaFrameRate" xml:space="preserve"><value>Frames per second</value></data>
+  <data name="MediaSource" xml:space="preserve"><value>Keep source</value></data>
+  <data name="MediaQualityNote" xml:space="preserve"><value>Lossless encoding keeps decoded audio. It cannot recover detail lost in the source.</value></data>
+  <data name="ImageErrorMediaToolsMissing" xml:space="preserve"><value>Verified FFmpeg tools are missing. See the setup guide.</value></data>
+  <data name="ImageErrorInvalidMedia" xml:space="preserve"><value>The media cannot be read or the output could not be verified.</value></data>
+  <data name="ImageErrorMediaAudioMissing" xml:space="preserve"><value>The file has no usable audio stream.</value></data>
+  <data name="ImageErrorMediaTimedOut" xml:space="preserve"><value>The media operation timed out.</value></data>
+  <data name="ImageErrorMediaEncoderUnavailable" xml:space="preserve"><value>The configured FFmpeg build lacks the requested encoder.</value></data>
 </root>

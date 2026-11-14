@@ -117,6 +117,27 @@
                   </DockPanel>
                 </StackPanel>
                 <TextBlock Classes="secondary" IsVisible="{Binding ShowsJpegWarning}" Text="{Binding Text.JpegWhiteBackground}" />
+                <StackPanel Spacing="6" IsVisible="{Binding ShowsMediaOptions}">
+                  <TextBlock Text="{Binding TargetCodecs}" />
+                  <TextBlock Text="{Binding Text.MediaQuality}" />
+                  <ComboBox SelectedIndex="{Binding MediaQualityIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{Binding Text.MediaLow}" />
+                    <ComboBoxItem Content="{Binding Text.MediaStandard}" />
+                    <ComboBoxItem Content="{Binding Text.MediaHigh}" />
+                    <ComboBoxItem Content="{Binding Text.MediaCustom}" />
+                  </ComboBox>
+                  <StackPanel IsVisible="{Binding ShowsCustomBitrate}">
+                    <TextBlock Text="{Binding Text.MediaBitrate}" />
+                    <ComboBox ItemsSource="{Binding MediaBitrates}" SelectedItem="{Binding MediaBitrate, Mode=TwoWay}" />
+                  </StackPanel>
+                  <StackPanel Spacing="4" IsVisible="{Binding ShowsVideoOptions}">
+                    <TextBlock Text="{Binding Text.MediaResolution}" />
+                    <ComboBox ItemsSource="{Binding MediaHeights}" SelectedItem="{Binding MediaHeight, Mode=TwoWay}" PlaceholderText="{Binding Text.MediaSource}" />
+                    <TextBlock Text="{Binding Text.MediaFrameRate}" />
+                    <ComboBox ItemsSource="{Binding MediaFrameRates}" SelectedItem="{Binding MediaFrameRate, Mode=TwoWay}" PlaceholderText="{Binding Text.MediaSource}" />
+                  </StackPanel>
+                  <TextBlock Classes="secondary" Text="{Binding Text.MediaQualityNote}" />
+                </StackPanel>
                 <TextBlock Text="{Binding Text.OutputFolder}" />
                 <TextBlock AutomationProperties.AutomationId="OutputFolderPath" Text="{Binding DestinationLabel}" TextTrimming="CharacterEllipsis"
                            ToolTip.Tip="{Binding DestinationLabel}" />
@@ -130,7 +151,7 @@
               <Button Classes="accent" AutomationProperties.AutomationId="ConvertImages" Content="{Binding Text.ConvertImages}"
                       Command="{Binding ConvertImagesCommand}" IsEnabled="{Binding CanConvertFiles}" />
               <Button AutomationProperties.AutomationId="QueueSimulation" Content="{Binding Text.QueueSimulation}"
-                      Command="{Binding QueueSimulationCommand}" IsEnabled="{Binding CanQueueFiles}" />
+                      Command="{Binding QueueSimulationCommand}" IsEnabled="{Binding CanQueueFiles}" IsVisible="{Binding !ShowsMediaOptions}" />
               <Button Content="{Binding Text.RefreshPreview}" Command="{Binding RefreshPreviewCommand}"
                       IsEnabled="{Binding CanEditFiles}" IsVisible="{Binding HasFiles}" />
             </WrapPanel>

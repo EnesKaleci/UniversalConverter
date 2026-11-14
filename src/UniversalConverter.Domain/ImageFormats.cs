@@ -15,7 +15,7 @@ public static class ImageFormats
          select new ConversionCapability(source, target)).ToArray());
 }
 
-public enum ConversionFailure { InvalidImage, FormatMismatch, AnimatedImage, ImageTooLarge, SourceAccess, OutputAccess, Encoding, DiskFull }
+public enum ConversionFailure { InvalidImage, FormatMismatch, AnimatedImage, ImageTooLarge, SourceAccess, OutputAccess, Encoding, DiskFull, MediaToolsMissing, InvalidMedia, MediaAudioMissing, MediaTimedOut, MediaEncoderUnavailable }
 
 public sealed class ConversionException(ConversionFailure reason, Exception? inner = null) : IOException(reason.ToString(), inner)
 {

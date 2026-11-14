@@ -2,7 +2,7 @@ name: Windows trusted distribution
 
 on:
   push:
-    branches: [main, 'codex/m1-s-trusted-distribution', 'codex/m1-2-file-management', 'codex/m2-image-conversion']
+    branches: [main, 'codex/m1-s-trusted-distribution', 'codex/m1-2-file-management', 'codex/m2-image-conversion', 'codex/m3-audio-video-conversion']
     tags: ['v*']
 
 permissions:
@@ -61,6 +61,9 @@ jobs:
           }
           if ($env:GITHUB_REF_NAME -eq 'codex/m2-image-conversion') {
             $env:ARTIFACT_NAME = 'UniversalConverter-M2-Windows-x64-SingleFile-Unsigned-Development-Test'
+          }
+          if ($env:GITHUB_REF_NAME -eq 'codex/m3-audio-video-conversion') {
+            $env:ARTIFACT_NAME = 'UniversalConverter-M3-Windows-x64-SingleFile-Unsigned-Development-Test'
           }
           "ARTIFACT_NAME=$env:ARTIFACT_NAME" >> $env:GITHUB_ENV
           "package_name=$env:ARTIFACT_NAME" >> $env:GITHUB_OUTPUT

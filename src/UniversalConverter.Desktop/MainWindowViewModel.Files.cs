@@ -26,10 +26,26 @@ public partial class MainWindowViewModel
 
     public bool CanEditFiles => !_stopping && PreferencesLoaded && !IsPreparing;
     public bool HasFiles => _inputs.Count > 0;
-    public bool CanQueueFiles => CanEditFiles && _proposals.Any(proposal => proposal.Path is not null);
+    public bool CanQueueFiles => !ShowsMediaOptions && CanEditFiles && _proposals.Any(proposal => proposal.Path is not null);
     public bool CanConvertFiles => CanEditFiles && _proposals.Any(proposal =>
         proposal.Path is not null || proposal.Issue == OutputIssue.Conflict);
-    public bool ShowsQuality => SelectedTarget is { } target && target.Format != ImageFormats.Png;
+    public bool ShowsQuality => SelectedTarget is { } target && target.Format.Category == FormatCategory.Image && target.Format != ImageFormats.Png;
+    public bool ShowsMediaOptions => SelectedTarget is { } choice && MediaFormats.Find(choice.Format) is not null;
+    public bool ShowsVideoOptions => SelectedTarget is { } choice && MediaFormats.Find(choice.Format)?.IsVideo == true;
+    public string TargetCodecs => SelectedTarget is { } choice && MediaFormats.Find(choice.Format) is { } media
+        ? string.Join(" / ", new[] { media.VideoCodec, media.AudioCodec }.OfType<string>()) : "";
+    public bool ShowsCustomBitrate => MediaQualityIndex == 3 && SelectedTarget is { } choice &&
+        MediaFormats.Find(choice.Format)?.IsLosslessAudio == false;
+    public int[] MediaBitrates { get; } = [128, 192, 256, 320];
+    public int[] MediaHeights { get; } = [480, 720, 1080, 1440, 2160];
+    public int[] MediaFrameRates { get; } = [24, 25, 30, 50, 60];
+
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private int _mediaQualityIndex = 1;
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private int _mediaBitrate = 192;
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private int? _mediaHeight;
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private int? _mediaFrameRate;
+    partial void OnMediaQualityIndexChanged(int value) => OnPropertyChanged(nameof(ShowsCustomBitrate));
+
     public bool ShowsJpegWarning => (SelectedTarget?.Format == ImageFormats.Jpeg || SelectedTarget?.Format == ImageFormats.JpegLong) &&
         _inputs.Any(file => file.Format == ImageFormats.Png || file.Format == ImageFormats.WebP);
 
@@ -165,6 +181,7 @@ public partial class MainWindowViewModel
             !simulation && proposal.Issue == OutputIssue.Conflict).ToArray();
         var policy = (OutputCollisionPolicy)CollisionIndex;
         var quality = Quality;
+        var media = new MediaOptions((MediaQuality)MediaQualityIndex, MediaBitrate, MediaHeight ?? 0, MediaFrameRate ?? 0);
         var directory = OutputDirectory;
         if (eligible.Length == 0)
         {
@@ -186,7 +203,7 @@ public partial class MainWindowViewModel
                     var output = simulation ? null : Path.Combine(directory ?? Path.GetDirectoryName(input.Path)!,
                         OutputNaming.CreateFileName(input.Name, target));
                     _queue.Enqueue(new ConversionRequest(input.Path, target, output, Simulation: simulation,
-                        CollisionPolicy: simulation ? null : policy, Quality: quality));
+                        CollisionPolicy: simulation ? null : policy, Quality: quality, Media: media));
                     accepted.Add(input);
                 }
                 catch (Exception exception) when (exception is IOException or ArgumentException or NotSupportedException or InvalidOperationException or UnauthorizedAccessException)
@@ -256,6 +273,10 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(CanQueueFiles));
         OnPropertyChanged(nameof(CanConvertFiles));
         OnPropertyChanged(nameof(ShowsQuality));
+        OnPropertyChanged(nameof(ShowsMediaOptions));
+        OnPropertyChanged(nameof(ShowsVideoOptions));
+        OnPropertyChanged(nameof(ShowsCustomBitrate));
+        OnPropertyChanged(nameof(TargetCodecs));
         OnPropertyChanged(nameof(ShowsJpegWarning));
         OnPropertyChanged(nameof(HasFiles));
         OnPropertyChanged(nameof(HasCustomFolder));
