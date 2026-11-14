@@ -1,9 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Condition="'$(WindowsReleaseProfile)' == 'true'">
+    <DefineConstants>$(DefineConstants);WINDOWS_RELEASE_PROFILE</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../UniversalConverter.Application/UniversalConverter.Application.csproj" />
     <ProjectReference Include="../UniversalConverter.Contracts/UniversalConverter.Contracts.csproj" />
     <ProjectReference Include="../UniversalConverter.Domain/UniversalConverter.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(WindowsReleaseProfile)' != 'true'">
     <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(WindowsReleaseProfile)' == 'true'">
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.provider.winsqlite3" />
   </ItemGroup>
 </Project>

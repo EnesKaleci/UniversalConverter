@@ -1,7 +1,10 @@
+param([switch]$WindowsReleaseProfile)
+
 $ErrorActionPreference = 'Stop'
 
 $layout = $env:PACKAGE_LAYOUT
 if ($layout -notin 'multi-file', 'single-file') { throw 'Unknown package layout.' }
+if ($WindowsReleaseProfile -and $layout -ne 'single-file') { throw 'The Windows release profile requires a Single-file publish.' }
 $stage = (Resolve-Path artifacts/publish).Path
 $root = $env:PACKAGE_TEST_ROOT
 $extract = Join-Path $root 'extracted'
@@ -11,6 +14,7 @@ New-Item -ItemType Directory -Path $extract, $work | Out-Null
 Copy-Item LICENSE, README.md -Destination $stage
 Copy-Item docs/legal -Destination (Join-Path $stage 'legal') -Recurse
 Copy-Item docs/security/windows-app-control.md -Destination $stage
+if ($WindowsReleaseProfile) { Copy-Item docs/security/windows-trusted-distribution.md -Destination $stage }
 git archive --format=zip --output=artifacts/publish/UniversalConverter-source.zip HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Could not archive corresponding project source.' }
 
@@ -25,7 +29,7 @@ $signatures = Get-ChildItem -LiteralPath $stage -Recurse -File |
         }
     }
 $signatures | Export-Csv (Join-Path $stage 'authenticode.csv') -NoTypeInformation
-$signatures | Where-Object Path -match '^(UniversalConverter\..*|libSkiaSharp|libHarfBuzzSharp|e_sqlite3)\.(exe|dll)$' |
+$signatures | Where-Object Path -match '^(UniversalConverter\..*|libSkiaSharp|libHarfBuzzSharp|e_sqlite3|av_libglesv2)\.(exe|dll)$' |
     ForEach-Object { Write-Host "Authenticode $($_.Path): $($_.Status)" }
 
 $zip = Join-Path (Resolve-Path artifacts).Path "$($env:ARTIFACT_NAME).zip"
@@ -48,7 +52,8 @@ Write-Host "Verified $($original.Count) extracted files against publish output."
 
 $exe = Join-Path $extract 'UniversalConverter.Desktop.exe'
 $infra = Join-Path $extract 'UniversalConverter.Infrastructure.dll'
-$natives = @('libSkiaSharp.dll', 'libHarfBuzzSharp.dll', 'e_sqlite3.dll')
+$natives = @('libSkiaSharp.dll', 'libHarfBuzzSharp.dll')
+$natives += if ($WindowsReleaseProfile) { 'av_libglesv2.dll' } else { 'e_sqlite3.dll' }
 if ($layout -eq 'single-file') {
     if (@($extracted | Where-Object Extension -in '.dll', '.exe').Count -ne 1) {
         throw 'Single-file ZIP has unexpected sidecar binaries.'
@@ -126,6 +131,9 @@ if ($layout -eq 'single-file') {
         if (-not $file) { throw "Expected extracted native library: $name" }
         $signature = Get-AuthenticodeSignature -LiteralPath $file.FullName
         Write-Host "Extracted native Authenticode ${name}: $($signature.Status)"
+    }
+    if ($WindowsReleaseProfile -and $nativeCache.Name -contains 'e_sqlite3.dll') {
+        throw 'An application-shipped SQLite DLL was extracted in the Windows release profile.'
     }
     if ($nativeCache.Name -contains 'UniversalConverter.Infrastructure.dll') {
         throw 'Managed Infrastructure assembly was unexpectedly extracted.'
