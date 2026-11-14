@@ -21,7 +21,9 @@ $hashes = foreach ($exe in 'ffmpeg.exe', 'ffprobe.exe') {
     Copy-Item -LiteralPath $files[0].FullName -Destination $staged
     $signature = Get-AuthenticodeSignature -LiteralPath $files[0].FullName
     Write-Host "$exe Authenticode $($signature.Status)"
-    (Get-FileHash -LiteralPath $files[0].FullName -Algorithm SHA256).Hash
+    $hash = (Get-FileHash -LiteralPath $files[0].FullName -Algorithm SHA256).Hash
+    Write-Host "$exe SHA-256 $hash"
+    $hash
 }
 $hashes | Set-Content -LiteralPath (Join-Path $staged 'tools.sha256') -Encoding ASCII
 $ffmpeg = Join-Path $staged 'ffmpeg.exe'

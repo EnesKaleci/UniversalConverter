@@ -338,7 +338,8 @@ function Test-MediaConversion($Window, $Process) {
             throw "Could not select $target."
         }
         $pattern.Select()
-        $combo.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse()
+        $expansion = $combo.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+        if ($expansion.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Collapsed) { $expansion.Collapse() }
         $button = Wait-ForResult {
             $item = Get-UiElement $Window 'ConvertImages'
             if ($item -and $item.Current.IsEnabled) { $item }

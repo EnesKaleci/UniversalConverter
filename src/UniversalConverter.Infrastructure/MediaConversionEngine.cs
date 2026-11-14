@@ -97,6 +97,10 @@ public sealed class MediaConversionEngine(string toolsDirectory) : IOutputCommit
         {
             throw new ConversionException(ConversionFailure.MediaTimedOut, error);
         }
+        catch (Win32Exception error)
+        {
+            throw new ConversionException(ConversionFailure.MediaToolsMissing, error);
+        }
         catch (Exception error) when (error is not ConversionException && (error is IOException or UnauthorizedAccessException))
         {
             throw new ConversionException(ConversionFailure.OutputAccess, error);
@@ -114,8 +118,11 @@ public sealed class MediaConversionEngine(string toolsDirectory) : IOutputCommit
         FileStream? probe = null;
         try
         {
-            var hashes = await File.ReadAllLinesAsync(Path.Combine(toolsDirectory, "tools.sha256"), token).ConfigureAwait(false);
-            if (hashes.Length != 2)
+            var manifest = new FileInfo(Path.Combine(toolsDirectory, "tools.sha256"));
+            if (manifest.Length > 256)
+                throw new InvalidDataException("The media tool manifest is oversized.");
+            var hashes = await File.ReadAllLinesAsync(manifest.FullName, token).ConfigureAwait(false);
+            if (hashes.Length != 2 || hashes.Any(hash => hash.Length != 64 || !hash.All(Uri.IsHexDigit)))
                 throw new InvalidDataException("The media tool manifest is invalid.");
             encoder = OpenSource(Path.Combine(toolsDirectory, "ffmpeg.exe"));
             probe = OpenSource(Path.Combine(toolsDirectory, "ffprobe.exe"));

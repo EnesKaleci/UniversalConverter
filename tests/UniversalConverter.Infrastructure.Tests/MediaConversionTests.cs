@@ -67,6 +67,19 @@ public sealed class MediaConversionTests
     }
 
     [Fact]
+    public void MediaCatalogRejectsInvalidPairsAndUsesExplicitMuxers()
+    {
+        Assert.DoesNotContain(MediaFormats.Pairs, pair => pair.Source == pair.Target);
+        Assert.DoesNotContain(MediaFormats.Pairs, pair => pair.Source.Category == FormatCategory.Audio &&
+                                                        pair.Target.Category == FormatCategory.Video);
+        var opus = MediaFormats.All.Single(format => format.Format.Extension == "opus");
+        var aac = MediaFormats.All.Single(format => format.Format.Extension == "aac");
+        Assert.Equal("ogg", opus.Demuxer);
+        Assert.Equal("opus", opus.Muxer);
+        Assert.Equal("adts", aac.Muxer);
+    }
+
+    [Fact]
     public async Task MissingToolsAreReportedBeforeCreatingAnOutput()
     {
         using var workspace = new TemporaryWorkspace();
