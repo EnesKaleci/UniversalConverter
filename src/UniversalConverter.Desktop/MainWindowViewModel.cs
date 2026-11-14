@@ -255,7 +255,7 @@ public partial class MainWindowViewModel : ObservableObject
             if (!_jobRows.TryGetValue(job.Id, out var row))
                 row = new(job.Id, Title(job.Request.InputPath, job.Request.Target.Extension), new RelayCommand(() => _queue.Cancel(job.Id)));
 
-            row.Status = StatusText(job.Status, simulation);
+            row.Status = StatusText(job.Status, simulation, MediaFormats.Find(job.Request.Target) is not null);
             row.Percent = job.Percent;
             row.CancelLabel = Text.CancelJob;
             row.CanCancel = !job.IsTerminal && job.CanCancel;
@@ -305,11 +305,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     private static string Title(string source, string target) => $"{Path.GetFileName(source)} → {target.ToUpperInvariant()}";
 
-    private string StatusText(ConversionStatus status, bool simulation) => Text.Get(status switch
+    private string StatusText(ConversionStatus status, bool simulation, bool media = false) => Text.Get(status switch
     {
         ConversionStatus.Queued => "JobQueued",
         ConversionStatus.Running => "JobRunning",
-        ConversionStatus.Completed => simulation ? "JobCompleted" : "ImageCompleted",
+        ConversionStatus.Completed => simulation ? "JobCompleted" : media ? "MediaCompleted" : "ImageCompleted",
         ConversionStatus.Failed => "JobFailed",
         ConversionStatus.Cancelled => "JobCancelled",
         ConversionStatus.Skipped => "ImageSkipped",
@@ -324,7 +324,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var row = new JobRow(entry.Id, Title(entry.SourcePath, entry.Target), new RelayCommand(() => { }))
         {
-            Status = StatusText(entry.Status, false),
+            Status = StatusText(entry.Status, false, MediaFormats.All.Any(format => format.Format.Extension == entry.Target)),
             Message = entry.Status == ConversionStatus.Failed ? FailureText(entry.Error, false) : "",
             SourcePath = entry.SourcePath,
             Output = entry.OutputPath ?? "",

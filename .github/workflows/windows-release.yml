@@ -111,6 +111,8 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.source.outputs.version }}
         run: |
+          Copy-Item -LiteralPath .github/scripts/Install-MediaTools.ps1 -Destination artifacts/publish
+          Copy-Item -LiteralPath docs/testing/m3-windows-acceptance.md -Destination artifacts/publish
           ./.github/scripts/Test-WindowsPortable.ps1 -WindowsReleaseProfile
           $exe = Get-Item -LiteralPath (Join-Path $env:PACKAGE_TEST_ROOT 'extracted/UniversalConverter.Desktop.exe')
           if ($exe.VersionInfo.ProductName -cne 'Universal Converter' -or

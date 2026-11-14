@@ -110,7 +110,7 @@
   <data name="ImageQuality" xml:space="preserve"><value>JPEG / WebP kalitesi</value></data>
   <data name="JpegWhiteBackground" xml:space="preserve"><value>JPEG şeffaflığı desteklemez. Şeffaf alanlar beyaz olur.</value></data>
   <data name="ConvertImages" xml:space="preserve"><value>Dönüştür</value></data>
-  <data name="ImageHistory" xml:space="preserve"><value>Görsel dönüşümleri</value></data>
+  <data name="ImageHistory" xml:space="preserve"><value>Dönüşüm geçmişi</value></data>
   <data name="SimulationHistory" xml:space="preserve"><value>Bu oturumdaki simülasyonlar</value></data>
   <data name="SimulationMode" xml:space="preserve"><value>Simülasyon</value></data>
   <data name="ImageMode" xml:space="preserve"><value>Görsel dönüşümü</value></data>
@@ -145,4 +145,5 @@
   <data name="ImageErrorMediaAudioMissing" xml:space="preserve"><value>Dosyada kullanılabilir ses akışı yok.</value></data>
   <data name="ImageErrorMediaTimedOut" xml:space="preserve"><value>Medya işlemi zaman aşımına uğradı.</value></data>
   <data name="ImageErrorMediaEncoderUnavailable" xml:space="preserve"><value>Yapılandırılan FFmpeg derlemesinde istenen kodlayıcı yok.</value></data>
+  <data name="MediaCompleted" xml:space="preserve"><value>Medya dönüştürüldü</value></data>
 </root>
