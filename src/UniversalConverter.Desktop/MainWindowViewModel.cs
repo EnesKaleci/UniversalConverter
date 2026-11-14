@@ -10,7 +10,17 @@ using UniversalConverter.Infrastructure;
 namespace UniversalConverter.Desktop;
 
 public sealed record TargetOption(string Label, FileFormat Format);
-public sealed record JobRow(string Title, string Status, int Percent, string CancelLabel, ICommand Cancel, string Message);
+public sealed partial class JobRow(Guid id, string title, ICommand cancel) : ObservableObject
+{
+    public Guid Id { get; } = id;
+    public string Title { get; } = title;
+    public ICommand Cancel { get; } = cancel;
+
+    [ObservableProperty] private string _status = "";
+    [ObservableProperty] private int _percent;
+    [ObservableProperty] private string _cancelLabel = "";
+    [ObservableProperty] private string _message = "";
+}
 
 public partial class MainWindowViewModel : ObservableObject
 {
@@ -22,6 +32,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly StartupLog _startup;
     private readonly ILogger<MainWindowViewModel> _logger;
     private IReadOnlyList<ConversionJob> _lastSnapshot = [];
+    private Dictionary<Guid, JobRow> _jobRows = [];
     private Task? _initialization;
     private Task _languageSave = Task.CompletedTask;
     private int _languageSaveRevision;
@@ -209,30 +220,40 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void RebuildJobRows()
     {
-        ActiveJobs = _lastSnapshot.Where(job => !job.IsTerminal).Select(ToRow).ToArray();
-        FinishedJobs = _lastSnapshot.Where(job => job.IsTerminal).Select(ToRow).ToArray();
+        var updated = new Dictionary<Guid, JobRow>();
+        foreach (var job in _lastSnapshot)
+        {
+            if (!_jobRows.TryGetValue(job.Id, out var row))
+                row = new(job.Id, $"{Path.GetFileName(job.Request.InputPath)} → {job.Request.Target.Extension.ToUpperInvariant()}",
+                    new RelayCommand(() => _queue.Cancel(job.Id)));
+
+            row.Status = Text.Get(job.Status switch
+            {
+                ConversionStatus.Queued => "JobQueued",
+                ConversionStatus.Running => "JobRunning",
+                ConversionStatus.Completed => "JobCompleted",
+                ConversionStatus.Failed => "JobFailed",
+                ConversionStatus.Cancelled => "JobCancelled",
+                _ => "TextUnavailable"
+            });
+            row.Percent = job.Percent;
+            row.CancelLabel = Text.CancelJob;
+            row.Message = job.Status == ConversionStatus.Failed ? Text.Get("JobFailedMessage") : "";
+            updated.Add(job.Id, row);
+        }
+        _jobRows = updated;
+        var active = _lastSnapshot.Where(job => !job.IsTerminal).Select(job => _jobRows[job.Id]).ToArray();
+        var finished = _lastSnapshot.Where(job => job.IsTerminal).Select(job => _jobRows[job.Id]).ToArray();
+        if (!ActiveJobs.SequenceEqual(active))
+            ActiveJobs = active;
+        if (!FinishedJobs.SequenceEqual(finished))
+            FinishedJobs = finished;
         OnPropertyChanged(nameof(QueueSummary));
         OnPropertyChanged(nameof(QueueProgress));
         OnPropertyChanged(nameof(QueueProgressText));
         OnPropertyChanged(nameof(HasJobs));
         OnPropertyChanged(nameof(HasFinishedJobs));
     }
-
-    private JobRow ToRow(ConversionJob job) => new(
-        $"{Path.GetFileName(job.Request.InputPath)} → {job.Request.Target.Extension.ToUpperInvariant()}",
-        Text.Get(job.Status switch
-        {
-            ConversionStatus.Queued => "JobQueued",
-            ConversionStatus.Running => "JobRunning",
-            ConversionStatus.Completed => "JobCompleted",
-            ConversionStatus.Failed => "JobFailed",
-            ConversionStatus.Cancelled => "JobCancelled",
-            _ => "TextUnavailable"
-        }),
-        job.Percent,
-        Text.CancelJob,
-        new RelayCommand(() => _queue.Cancel(job.Id)),
-        job.Status == ConversionStatus.Failed ? Text.Get("JobFailedMessage") : "");
 
     public bool HasFinishedJobs => FinishedJobs.Count > 0;
     public bool HasJobs => _lastSnapshot.Count > 0;

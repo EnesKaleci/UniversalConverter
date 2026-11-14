@@ -1,4 +1,6 @@
-﻿$ErrorActionPreference = 'Stop'
+﻿param([switch]$FileManagement)
+
+$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 Add-Type @'
 using System;
@@ -183,6 +185,14 @@ function Test-TurkishFile {
     [IO.File]::WriteAllBytes($file, [Convert]::FromBase64String(
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGOQqzgBAAIWAV+8KCb8AAAAAElFTkSuQmCC'))
 
+    $picked = $file
+    if ($FileManagement) {
+        $second = Join-Path $folder 'İzmir Iİıi.PNG'
+        $third = Join-Path $folder 'Mavi.PNG'
+        $second, $third | ForEach-Object { [IO.File]::Copy($file, $_) }
+        $picked = '"' + ($file, $second, $third -join '" "') + '"'
+    }
+
     Set-Selection $Window 'NavConvert'
     $choose = Wait-ForResult { Get-UiElement $Window 'ChooseFiles' } 'file picker button'
     $choose.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
@@ -205,10 +215,33 @@ function Test-TurkishFile {
         $control = [ConverterTestWindows]::FileNameEdit($handle)
         if ($control -ne [IntPtr]::Zero) { $control }
     } 'native filename edit'
-    if (-not [ConverterTestWindows]::SetFileName($edit, $file)) { throw 'Could not enter the Unicode path.' }
+    if (-not [ConverterTestWindows]::SetFileName($edit, $picked)) { throw 'Could not enter the Unicode path.' }
     if (-not [ConverterTestWindows]::OpenSelectedFile($handle)) { throw 'Could not invoke the native Open button.' }
     $null = Wait-ForResult { Get-VisibleUiText $Window $file } 'original Turkish file path'
-    $submit = Get-UiElement $Window 'QueueSimulation'
+    if ($FileManagement) {
+        $size = (Get-Item -LiteralPath $file).Length
+        Assert-UiName $Window 'FileSummary' "3 dosya · toplam $($size * 3) B"
+        $null = Wait-ForResult { Get-VisibleUiText $Window 'Çıktı önizlemesi · İşık ışıĞı Şüphe.jpg' } 'Turkish output preview'
+        $list = Get-UiElement $Window 'InputFiles'
+        $itemType = [System.Windows.Automation.PropertyCondition]::new(
+            [System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem)
+        $items = $list.FindAll([System.Windows.Automation.TreeScope]::Descendants, $itemType)
+        $keep = [System.Windows.Automation.PropertyCondition]::new(
+            [System.Windows.Automation.AutomationElement]::NameProperty, $file)
+        $remove = @($items | Where-Object {
+            -not $_.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $keep)
+        })
+        if ($items.Count -ne 3 -or $remove.Count -ne 2) { throw 'Could not locate the three file rows and original Unicode path.' }
+        $remove[0].GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        $remove[1].GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).AddToSelection()
+        (Get-UiElement $Window 'RemoveSelected').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        Assert-UiName $Window 'FileSummary' "1 dosya · toplam $size B"
+        $null = Wait-ForResult { Get-VisibleUiText $Window $file } 'remaining source after multi-remove'
+    }
+    $submit = Wait-ForResult {
+        $button = Get-UiElement $Window 'QueueSimulation'
+        if ($button -and $button.Current.IsEnabled) { $button }
+    } 'enabled queue button'
     $submit.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
     Assert-UiName $Window 'PageTitle' 'Kuyruk'
     Set-Selection $Window 'NavHistory'
@@ -225,8 +258,10 @@ function Test-TurkishFile {
             ForEach-Object { Get-Content -LiteralPath $_.FullName }
         throw
     }
-    if ((Get-ChildItem -LiteralPath $folder -File).Count -ne 1) { throw 'Simulation created an output file.' }
+    $expectedSourceCount = if ($FileManagement) { 3 } else { 1 }
+    if ((Get-ChildItem -LiteralPath $folder -File).Count -ne $expectedSourceCount) { throw 'Simulation created an output file.' }
     Write-Host 'Unicode file picker, queue and history passed.'
+    if ($FileManagement) { Write-Host 'M1.2 multi-file picker, output preview and multiple removal passed.' }
 }
 
 # Seed the other language regardless of the runner account's display language.

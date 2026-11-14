@@ -66,7 +66,7 @@
             <ListBox x:Name="InputList" AutomationProperties.AutomationId="InputFiles"
                      AutomationProperties.Name="{Binding Text.FileList}"
                      ItemsSource="{Binding FileRows}" SelectionMode="Multiple" MaxHeight="280"
-                     IsEnabled="{Binding CanEditFiles}" KeyDown="OnFileListKeyDown"
+                     IsEnabled="{Binding CanEditFiles}" KeyDown="OnFileListKeyDown" SelectionChanged="OnFileSelectionChanged"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="local:FileRow">
@@ -81,7 +81,7 @@
               </ListBox.ItemTemplate>
             </ListBox>
             <WrapPanel ItemSpacing="8" LineSpacing="8" IsEnabled="{Binding CanEditFiles}" IsVisible="{Binding HasFiles}">
-              <Button AutomationProperties.AutomationId="RemoveSelected" Content="{Binding Text.RemoveSelected}" Click="OnRemoveSelected" />
+              <Button x:Name="RemoveSelectedButton" IsEnabled="False" AutomationProperties.AutomationId="RemoveSelected" Content="{Binding Text.RemoveSelected}" Click="OnRemoveSelected" />
               <Button AutomationProperties.AutomationId="ClearFiles" Content="{Binding Text.ClearFiles}" Click="OnClearFiles" />
             </WrapPanel>
             <Border Classes="panel" Padding="16" IsEnabled="{Binding CanEditFiles}">

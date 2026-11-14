@@ -27,7 +27,6 @@ jobs:
     outputs:
       version: ${{ steps.source.outputs.version }}
       commit: ${{ steps.source.outputs.commit }}
-      package-name: ${{ steps.source.outputs.package_name }}
       candidate-id: ${{ steps.upload.outputs.artifact-id }}
       zip-sha256: ${{ steps.candidate.outputs.zip_sha256 }}
     steps:
@@ -104,7 +103,7 @@ jobs:
               $exe.VersionInfo.ProductVersion -cne $env:RELEASE_VERSION) {
             throw 'Packaged EXE metadata does not match the release build.'
           }
-          & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1
+          & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1 -FileManagement
           if ($LASTEXITCODE -ne 0) { throw 'Windows localization smoke test failed.' }
           $zip = "artifacts/$($env:ARTIFACT_NAME).zip"
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash

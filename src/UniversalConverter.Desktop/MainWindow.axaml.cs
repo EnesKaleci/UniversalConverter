@@ -91,6 +91,12 @@ public partial class MainWindow : Window
         finally { _pickerOpen = false; }
     }
 
+    private void OnFileSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (RemoveSelectedButton is not null)
+            RemoveSelectedButton.IsEnabled = InputList.SelectedItems is { Count: > 0 };
+    }
+
     private async void OnRemoveSelected(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
         await RemoveSelectionAsync();
 
