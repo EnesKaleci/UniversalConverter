@@ -109,8 +109,8 @@
   <data name="ImageBanner" xml:space="preserve"><value>PNG, JPEG ve WebP görsellerini dönüştür. Simülasyon dosya oluşturmadan çalışır.</value></data>
   <data name="ImageQuality" xml:space="preserve"><value>JPEG / WebP kalitesi</value></data>
   <data name="JpegWhiteBackground" xml:space="preserve"><value>JPEG şeffaflığı desteklemez. Şeffaf alanlar beyaz olur.</value></data>
-  <data name="ConvertImages" xml:space="preserve"><value>Görselleri dönüştür</value></data>
-  <data name="ImageHistory" xml:space="preserve"><value>Görsel dönüşümleri</value></data>
+  <data name="ConvertImages" xml:space="preserve"><value>Dönüştür</value></data>
+  <data name="ImageHistory" xml:space="preserve"><value>Dönüşüm geçmişi</value></data>
   <data name="SimulationHistory" xml:space="preserve"><value>Bu oturumdaki simülasyonlar</value></data>
   <data name="SimulationMode" xml:space="preserve"><value>Simülasyon</value></data>
   <data name="ImageMode" xml:space="preserve"><value>Görsel dönüşümü</value></data>
@@ -129,4 +129,23 @@
   <data name="ImageErrorOutputAccess" xml:space="preserve"><value>Hedefe yazılamadı. Konumu ve izinleri kontrol et.</value></data>
   <data name="ImageErrorEncoding" xml:space="preserve"><value>Görsel kodlanamadı veya doğrulanamadı.</value></data>
   <data name="ImageErrorDiskFull" xml:space="preserve"><value>Hedefte yeterli disk alanı yok.</value></data>
+  <data name="MediaMode" xml:space="preserve"><value>Medya dönüşümü</value></data>
+  <data name="MediaQuality" xml:space="preserve"><value>Kalite profili</value></data>
+  <data name="MediaLow" xml:space="preserve"><value>Düşük</value></data>
+  <data name="MediaStandard" xml:space="preserve"><value>Standart</value></data>
+  <data name="MediaHigh" xml:space="preserve"><value>Yüksek</value></data>
+  <data name="MediaCustom" xml:space="preserve"><value>Özel ses bit hızı</value></data>
+  <data name="MediaBitrate" xml:space="preserve"><value>Ses bit hızı (kbps)</value></data>
+  <data name="MediaResolution" xml:space="preserve"><value>Maksimum yükseklik (piksel)</value></data>
+  <data name="MediaFrameRate" xml:space="preserve"><value>Saniyedeki kare sayısı</value></data>
+  <data name="MediaSource" xml:space="preserve"><value>Kaynağı koru</value></data>
+  <data name="MediaQualityNote" xml:space="preserve"><value>Kayıpsız kodlama çözümlenen sesi korur. Kaynakta kaybolan ayrıntıları geri getiremez.</value></data>
+  <data name="ImageErrorMediaToolsMissing" xml:space="preserve"><value>Doğrulanmış FFmpeg araçları bulunamadı. Kurulum kılavuzuna bak.</value></data>
+  <data name="ImageErrorInvalidMedia" xml:space="preserve"><value>Medya okunamadı veya çıktı doğrulanamadı.</value></data>
+  <data name="ImageErrorMediaAudioMissing" xml:space="preserve"><value>Dosyada kullanılabilir ses akışı yok.</value></data>
+  <data name="ImageErrorMediaTimedOut" xml:space="preserve"><value>Medya işlemi zaman aşımına uğradı.</value></data>
+  <data name="ImageErrorMediaEncoderUnavailable" xml:space="preserve"><value>Yapılandırılan FFmpeg derlemesinde istenen kodlayıcı yok.</value></data>
+  <data name="MediaCompleted" xml:space="preserve"><value>Medya dönüştürüldü</value></data>
+  <data name="MediaInspect" xml:space="preserve"><value>Seçili medyayı incele</value></data>
+  <data name="MediaInfo" xml:space="preserve"><value>Kapsayıcı {0} · Video {1} · Ses {2} · {3} s · {4} · {5} fps · {6} kbps · {7} ch · {8} Hz</value></data>
 </root>

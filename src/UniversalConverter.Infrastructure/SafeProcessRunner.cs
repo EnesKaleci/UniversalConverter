@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace UniversalConverter.Infrastructure;
 
-public sealed record ProcessRequest(string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory, TimeSpan Timeout);
+public sealed record ProcessRequest(string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory, TimeSpan Timeout, Action<string>? OutputLine = null, bool RejectTruncatedOutput = false);
 public sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError);
 
 public interface ISafeProcessRunner
@@ -41,7 +41,7 @@ public sealed class SafeProcessRunner(IEnumerable<string> allowedExecutables) : 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(request.Timeout);
         using var process = Process.Start(start) ?? throw new InvalidOperationException("The process could not be started.");
-        var stdout = CaptureAsync(process.StandardOutput, deadline.Token);
+        var stdout = CaptureAsync(process.StandardOutput, deadline.Token, request.OutputLine, request.RejectTruncatedOutput);
         var stderr = CaptureAsync(process.StandardError, deadline.Token);
         try
         {
@@ -70,13 +70,32 @@ public sealed class SafeProcessRunner(IEnumerable<string> allowedExecutables) : 
         }
     }
 
-    private static async Task<string> CaptureAsync(StreamReader reader, CancellationToken cancellationToken)
+    private static async Task<string> CaptureAsync(StreamReader reader, CancellationToken cancellationToken, Action<string>? outputLine = null, bool rejectTruncated = false)
     {
+        var line = new System.Text.StringBuilder();
+        var truncated = false;
         var captured = new System.Text.StringBuilder();
         var buffer = new char[2048];
         int count;
         while ((count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false)) > 0)
+        {
+            truncated |= count > CapturedCharacters - captured.Length;
             captured.Append(buffer, 0, Math.Min(count, CapturedCharacters - captured.Length));
+            if (outputLine is null)
+                continue;
+            for (var i = 0; i < count; i++)
+            {
+                if (buffer[i] == '\n')
+                {
+                    outputLine(line.ToString().TrimEnd('\r'));
+                    line.Clear();
+                }
+                else if (line.Length < 512)
+                    line.Append(buffer[i]);
+            }
+        }
+        if (truncated && rejectTruncated)
+            throw new IOException("Process output exceeded the capture limit.");
         return captured.ToString();
     }
 }

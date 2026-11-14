@@ -1,4 +1,4 @@
-﻿param([switch]$FileManagement, [switch]$ImageConversion)
+﻿param([switch]$FileManagement, [switch]$ImageConversion, [switch]$MediaConversion)
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
@@ -298,6 +298,64 @@ function Test-TurkishFile {
     }
 }
 
+function Test-MediaConversion($Window, $Process) {
+    $folder = Join-Path $work 'Medya örnekleri'
+    $null = New-Item -ItemType Directory -Path $folder
+    $tools = Join-Path (Split-Path $exe -Parent) 'media-tools'
+    $ffmpeg = Join-Path $tools 'ffmpeg.exe'
+    $ffprobe = Join-Path $tools 'ffprobe.exe'
+    $audio = Join-Path $folder 'Çığ ve Işık.wav'
+    $video = Join-Path $folder 'Şüphe Video.mp4'
+    & $ffmpeg -v error -nostdin -f lavfi -i 'sine=frequency=440:duration=1' -c:a pcm_s16le $audio
+    if ($LASTEXITCODE) { throw 'WAV fixture generation failed.' }
+    & $ffmpeg -v error -nostdin -f lavfi -i 'testsrc2=size=64x48:rate=12:duration=1' -f lavfi -i 'sine=frequency=440:duration=1' -c:v libx264 -c:a aac -shortest $video
+    if ($LASTEXITCODE) { throw 'MP4 fixture generation failed.' }
+    foreach ($case in @(@($audio,'MP3','mp3','mp3'), @($video,'WEBM','webm','vp9'), @($video,'WAV','wav','pcm_s16le'))) {
+        $inputPath, $target, $extension, $codec = $case
+        $originalHash = (Get-FileHash -LiteralPath $inputPath).Hash
+        Set-Selection $Window 'NavConvert'
+        $choose = Wait-ForResult { Get-UiElement $Window 'ChooseFiles' } 'media picker'
+        $choose.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        $dialog = Wait-ForResult {
+            [ConverterTestWindows]::VisibleWindows($Process.Id) |
+                Where-Object { $_ -ne $Process.MainWindowHandle -and [ConverterTestWindows]::Title($_) -ceq 'Görselleri seç' } |
+                Select-Object -First 1
+        } 'media file dialog'
+        $edit = Wait-ForResult {
+            $control = [ConverterTestWindows]::FileNameEdit($dialog)
+            if ($control -ne [IntPtr]::Zero) { $control }
+        } 'media filename edit'
+        if (-not [ConverterTestWindows]::SetFileName($edit, $inputPath) -or
+            -not [ConverterTestWindows]::OpenSelectedFile($dialog)) { throw 'Media input could not be selected.' }
+
+        $combo = Wait-ForResult { Get-UiElement $Window 'TargetFormatPicker' } 'target format'
+        $combo.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
+        $option = Wait-ForResult { Get-VisibleUiText $Window $target } "$target target"
+        $parent = [System.Windows.Automation.TreeWalker]::ControlViewWalker.GetParent($option)
+        $pattern = $null
+        if (-not $option.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$pattern) -and
+            -not $parent.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$pattern)) {
+            throw "Could not select $target."
+        }
+        $pattern.Select()
+        $expansion = $combo.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+        if ($expansion.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Collapsed) { $expansion.Collapse() }
+        $button = Wait-ForResult {
+            $item = Get-UiElement $Window 'ConvertImages'
+            if ($item -and $item.Current.IsEnabled) { $item }
+        } 'convert button'
+        $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        Assert-UiName $Window 'PageTitle' 'Kuyruk'
+        Set-Selection $Window 'NavHistory'
+        $output = [IO.Path]::ChangeExtension($inputPath, $extension)
+        $null = Wait-ForResult { Get-VisibleUiText $Window $output } 'verified media result in history'
+        $streams = (& $ffprobe -v error -show_entries stream=codec_name -of json $output | Out-String | ConvertFrom-Json).streams
+        if ($LASTEXITCODE -ne 0 -or $streams.codec_name -notcontains $codec) { throw "Missing $codec in $output." }
+        if ((Get-FileHash -LiteralPath $inputPath).Hash -ne $originalHash) { throw 'The media source changed.' }
+        Write-Host "Verified real EXE media conversion to $extension."
+    }
+}
+
 # Seed the other language regardless of the runner account's display language.
 $english = @('Dashboard', 'Convert', 'Queue', 'History', 'Settings', 'About')
 $turkish = @('Genel Bakış', 'Dönüştür', 'Kuyruk', 'Geçmiş', 'Ayarlar', 'Hakkında')
@@ -319,6 +377,7 @@ try {
     }
     Test-Language $window 'LanguageTurkish' $turkish $turkishBanner 'Dil tercihi kaydedildi.'
     Test-TurkishFile $window $process $process.MainWindowHandle
+    if ($MediaConversion) { Test-MediaConversion $window $process }
     Test-Language $window 'LanguageEnglish' $english $englishBanner 'Language preference saved.'
     Test-Language $window 'LanguageTurkish' $turkish $turkishBanner 'Dil tercihi kaydedildi.'
     Stop-Cleanly $process

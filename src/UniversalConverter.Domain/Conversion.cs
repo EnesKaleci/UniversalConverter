@@ -6,7 +6,7 @@ public enum OutputOverwritePolicy { Reject, Replace }
 public sealed record ConversionRequest(
     string InputPath, FileFormat Target, string? OutputPath = null,
     OutputOverwritePolicy OverwritePolicy = OutputOverwritePolicy.Reject,
-    bool? Simulation = null, OutputCollisionPolicy? CollisionPolicy = null, int Quality = ImageFormats.DefaultQuality);
+    bool? Simulation = null, OutputCollisionPolicy? CollisionPolicy = null, int Quality = ImageFormats.DefaultQuality, MediaOptions? Media = null);
 
 public sealed record ConversionProgress
 {
@@ -50,6 +50,7 @@ public sealed record ConversionJob
     public ConversionRequest Request { get; }
     public ConversionStatus Status { get; private init; }
     public int Percent { get; private init; }
+    public bool HasMeasuredProgress { get; private init; }
     public ConversionResult? Result { get; private init; }
     public string? Error { get; private init; }
     public bool CanCancel { get; private init; } = true;
@@ -77,7 +78,7 @@ public sealed record ConversionJob
         : throw InvalidTransition();
 
     public ConversionJob Report(ConversionProgress progress) => Status == ConversionStatus.Running
-        ? this with { Percent = Math.Max(Percent, progress.Percent) }
+        ? this with { Percent = Math.Max(Percent, progress.Percent), HasMeasuredProgress = true }
         : throw InvalidTransition();
 
     public ConversionJob Complete(ConversionResult result) => Status == ConversionStatus.Running

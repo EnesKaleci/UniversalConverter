@@ -52,7 +52,7 @@ public partial class MainWindow : Window
             {
                 Title = viewModel.Text.PickerTitle,
                 AllowMultiple = true,
-                FileTypeFilter = [new FilePickerFileType(viewModel.Text.PickerFilter) { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.webp"] }]
+                FileTypeFilter = [new FilePickerFileType(viewModel.Text.PickerFilter) { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.mp3", "*.wav", "*.aac", "*.m4a", "*.flac", "*.ogg", "*.opus", "*.mp4", "*.mkv", "*.mov", "*.webm", "*.avi"] }]
             });
             if (files.Count > 0)
             {
@@ -89,6 +89,12 @@ public partial class MainWindow : Window
             viewModel.ReportPickerFailure(exception);
         }
         finally { _pickerOpen = false; }
+    }
+
+    private async void OnInspectMedia(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel && InputList.SelectedItem is FileRow row)
+            await viewModel.InspectMediaAsync(row);
     }
 
     private void OnFileSelectionChanged(object? sender, SelectionChangedEventArgs e)

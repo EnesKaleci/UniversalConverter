@@ -8,6 +8,7 @@ using Serilog;
 using UniversalConverter.Application;
 using UniversalConverter.Contracts;
 using UniversalConverter.Infrastructure;
+using UniversalConverter.Domain;
 
 namespace UniversalConverter.Desktop;
 
@@ -48,8 +49,10 @@ public partial class App : Avalonia.Application
         builder.Services.AddSingleton<IConversionHistory>(services => services.GetRequiredService<SettingsDatabase>());
         builder.Services.AddSingleton<IConverterEngine, SimulationEngine>();
         builder.Services.AddSingleton<IConverterEngine, ImageConversionEngine>();
+        builder.Services.AddSingleton(_ => new MediaConversionEngine(Path.Combine(AppContext.BaseDirectory, "media-tools")));
+        builder.Services.AddSingleton<IConverterEngine>(services => services.GetRequiredService<MediaConversionEngine>());
         builder.Services.AddSingleton<IConversionEngineRegistry, ConversionEngineRegistry>();
-        builder.Services.AddSingleton<IFormatDetector>(_ => new ExtensionFormatDetector(SimulationEngine.Formats));
+        builder.Services.AddSingleton<IFormatDetector>(_ => new ExtensionFormatDetector(ImageFormats.All.Concat(MediaFormats.All.Select(item => item.Format))));
         builder.Services.AddSingleton<IConversionPlanner, ConversionPlanner>();
         builder.Services.AddSingleton<ConversionCoordinator>();
         builder.Services.AddSingleton(services => new ConversionQueueService(
@@ -65,7 +68,7 @@ public partial class App : Avalonia.Application
             services.GetRequiredService<UiLocalization>(),
             services.GetRequiredService<StartupLog>(),
             services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MainWindowViewModel>>(),
-            services.GetRequiredService<IConversionHistory>()));
+            services.GetRequiredService<IConversionHistory>()) { MediaEngine = services.GetRequiredService<MediaConversionEngine>() });
 
         var host = builder.Build();
         try

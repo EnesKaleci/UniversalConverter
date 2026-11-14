@@ -2,7 +2,7 @@ name: Windows trusted distribution
 
 on:
   push:
-    branches: [main, 'codex/m1-s-trusted-distribution', 'codex/m1-2-file-management', 'codex/m2-image-conversion']
+    branches: [main, 'codex/m1-s-trusted-distribution', 'codex/m1-2-file-management', 'codex/m2-image-conversion', 'codex/m3-audio-video-conversion']
     tags: ['v*']
 
 permissions:
@@ -62,6 +62,9 @@ jobs:
           if ($env:GITHUB_REF_NAME -eq 'codex/m2-image-conversion') {
             $env:ARTIFACT_NAME = 'UniversalConverter-M2-Windows-x64-SingleFile-Unsigned-Development-Test'
           }
+          if ($env:GITHUB_REF_NAME -eq 'codex/m3-audio-video-conversion') {
+            $env:ARTIFACT_NAME = 'UniversalConverter-M3-Windows-x64-SingleFile-Unsigned-Development-Test'
+          }
           "ARTIFACT_NAME=$env:ARTIFACT_NAME" >> $env:GITHUB_ENV
           "package_name=$env:ARTIFACT_NAME" >> $env:GITHUB_OUTPUT
           "version=$version" >> $env:GITHUB_OUTPUT
@@ -79,6 +82,14 @@ jobs:
         run: |
           if ((dotnet --version) -ne $env:RELEASE_DOTNET_SDK) { throw 'Unexpected release SDK.' }
           dotnet restore UniversalConverter.slnx -p:WindowsReleaseProfile=true
+      - name: Install pinned test tools for media integration
+        if: github.ref_name == 'codex/m3-audio-video-conversion'
+        shell: pwsh
+        run: |
+          $toolsRoot = Join-Path $env:RUNNER_TEMP 'media-integration'
+          New-Item -ItemType Directory -Path $toolsRoot | Out-Null
+          ./.github/scripts/Install-MediaTools.ps1 -ApplicationDirectory $toolsRoot
+          "CONVERTER_TEST_MEDIA_TOOLS=$(Join-Path $toolsRoot 'media-tools')" >> $env:GITHUB_ENV
       - name: Build and test release profile
         shell: pwsh
         run: |
@@ -100,13 +111,20 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.source.outputs.version }}
         run: |
+          Copy-Item -LiteralPath .github/scripts/Install-MediaTools.ps1 -Destination artifacts/publish
+          Copy-Item -LiteralPath docs/testing/m3-windows-acceptance.md -Destination artifacts/publish
           ./.github/scripts/Test-WindowsPortable.ps1 -WindowsReleaseProfile
           $exe = Get-Item -LiteralPath (Join-Path $env:PACKAGE_TEST_ROOT 'extracted/UniversalConverter.Desktop.exe')
           if ($exe.VersionInfo.ProductName -cne 'Universal Converter' -or
               $exe.VersionInfo.ProductVersion -cne $env:RELEASE_VERSION) {
             throw 'Packaged EXE metadata does not match the release build.'
           }
-          & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1 -FileManagement -ImageConversion
+          $smokeArgs = @('-FileManagement', '-ImageConversion')
+          if ($env:GITHUB_REF_NAME -eq 'codex/m3-audio-video-conversion') {
+            Copy-Item -LiteralPath $env:CONVERTER_TEST_MEDIA_TOOLS -Destination (Join-Path $env:PACKAGE_TEST_ROOT 'extracted') -Recurse
+            $smokeArgs += '-MediaConversion'
+          }
+          & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1 @smokeArgs
           if ($LASTEXITCODE -ne 0) { throw 'Windows localization smoke test failed.' }
           $zip = "artifacts/$($env:ARTIFACT_NAME).zip"
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
