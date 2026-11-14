@@ -109,7 +109,12 @@ jobs:
               $exe.VersionInfo.ProductVersion -cne $env:RELEASE_VERSION) {
             throw 'Packaged EXE metadata does not match the release build.'
           }
-          & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1 -FileManagement -ImageConversion
+          $smokeArgs = @('-FileManagement', '-ImageConversion')
+          if ($env:GITHUB_REF_NAME -eq 'codex/m3-audio-video-conversion') {
+            ./.github/scripts/Install-MediaTools.ps1 -ApplicationDirectory (Join-Path $env:PACKAGE_TEST_ROOT 'extracted')
+            $smokeArgs += '-MediaConversion'
+          }
+          & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1 @smokeArgs
           if ($LASTEXITCODE -ne 0) { throw 'Windows localization smoke test failed.' }
           $zip = "artifacts/$($env:ARTIFACT_NAME).zip"
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
