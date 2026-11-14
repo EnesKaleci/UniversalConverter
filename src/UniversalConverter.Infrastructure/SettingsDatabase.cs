@@ -1,3 +1,6 @@
+#if WINDOWS_RELEASE_PROFILE
+using System.Runtime.InteropServices;
+#endif
 using Microsoft.Data.Sqlite;
 using UniversalConverter.Contracts;
 
@@ -7,6 +10,21 @@ public sealed class SettingsDatabase : ISettingsStore
 {
     private readonly string _directory;
     private readonly string _connectionString;
+
+#if WINDOWS_RELEASE_PROFILE
+    static SettingsDatabase()
+    {
+        if (!OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("The release profile requires Windows System SQLite.");
+
+        NativeLibrary.SetDllImportResolver(typeof(SQLitePCL.SQLite3Provider_winsqlite3).Assembly,
+            static (name, assembly, _) => name == "winsqlite3"
+                ? NativeLibrary.Load(Path.Combine(Environment.SystemDirectory, "winsqlite3.dll"),
+                    assembly, DllImportSearchPath.System32)
+                : IntPtr.Zero);
+        SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_winsqlite3());
+    }
+#endif
 
     public SettingsDatabase(string databasePath)
     {

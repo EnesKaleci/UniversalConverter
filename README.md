@@ -14,6 +14,10 @@ Open **Settings → Language** (**Ayarlar → Dil**) and select **English** or *
 
 İlk açılışta uygulama Windows görüntüleme dilini kullanır. Türkçe dışındaki sistem dillerinde İngilizce açılır. **Ayarlar → Dil** bölümünden seçtiğin dil anında uygulanır ve sonraki açılışta korunur.
 
+## Windows trusted distribution
+
+The Windows release profile uses a self-contained Single-file build with upstream-signed graphics libraries and Windows System SQLite. Actions artifacts marked **Unsigned-Test** are for CI and development. Read the [code signing policy, provider comparison and Windows acceptance checklist](docs/security/windows-trusted-distribution.md) before distributing a build.
+
 ## Build and run
 
 Install the .NET 10 SDK. From the repository root:
