@@ -184,6 +184,87 @@ public sealed class FileManagementTests
             Prepare().InspectAsync(["unreadable.PNG"], [], new CancellationToken(true)));
     }
 
+    [Fact]
+    public async Task QueueRechecksConflictsAndLeavesUnqueuedSourcesInTheList()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var source = WriteFixture(workspace.DirectoryPath, "İstanbul.PNG");
+        var database = new SettingsDatabase(Path.Combine(workspace.DirectoryPath, "settings.db"));
+        await using var queue = CreateQueue();
+        var model = Model(queue, database, workspace.DirectoryPath);
+        await model.InitializeAsync();
+
+        model.CollisionIndex = (int)OutputCollisionPolicy.Skip;
+        await model.AddFilesAsync([source]);
+        Assert.True(model.CanQueueFiles);
+        var conflictingFile = WriteFixture(workspace.DirectoryPath, "İstanbul.jpg");
+        await model.QueueSimulationCommand.ExecuteAsync(null);
+        Assert.False(model.CanQueueFiles);
+        Assert.Empty(queue.Snapshot());
+        Assert.Contains("Skipped", Assert.Single(model.FileRows).Preview);
+        Assert.Equal(new byte[] { 1, 2, 3 }, File.ReadAllBytes(conflictingFile));
+        Assert.Equal(new byte[] { 1, 2, 3 }, File.ReadAllBytes(source));
+        await model.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task CancelsVisibleQueuedAndRunningJobsAtTheTwoWorkerLimit()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var inputs = new[] { "İzmir.PNG", "Işık.PNG", "Çığ.PNG" }
+            .Select(name => WriteFixture(workspace.DirectoryPath, name)).ToArray();
+        var database = new SettingsDatabase(Path.Combine(workspace.DirectoryPath, "settings.db"));
+        var engine = new WaitingEngine();
+        var detector = new ExtensionFormatDetector(SimulationEngine.Formats);
+        await using var queue = new ConversionQueueService(new ConversionCoordinator(
+            new ConversionPlanner(detector, new ConversionEngineRegistry([engine]))));
+        var model = Model(queue, database, workspace.DirectoryPath);
+        await model.InitializeAsync();
+        await model.AddFilesAsync(inputs);
+        await model.QueueSimulationCommand.ExecuteAsync(null);
+
+        await engine.BothStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        model.Refresh();
+        Assert.Equal(2, model.ActiveJobs.Count(job => job.Status == "Running"));
+        var queued = Assert.Single(model.ActiveJobs.Where(job => job.Status == "Queued"));
+        Assert.InRange(model.QueueProgress, 1, 99);
+        queued.Cancel.Execute(null);
+        var running = model.ActiveJobs.First(job => job.Status == "Running");
+        running.Cancel.Execute(null);
+        await engine.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await model.ShutdownAsync();
+        model.Refresh();
+
+        Assert.Equal(2, engine.StartedCount);
+        Assert.Empty(model.ActiveJobs);
+        Assert.Equal(3, model.FinishedJobs.Count);
+        Assert.All(model.FinishedJobs, job => Assert.Equal("Cancelled", job.Status));
+        Assert.Equal(100, model.QueueProgress);
+        Assert.Equal(inputs.Order(StringComparer.Ordinal), Directory.GetFiles(workspace.DirectoryPath, "*.PNG").Order(StringComparer.Ordinal));
+    }
+
+    private sealed class WaitingEngine : IConverterEngine
+    {
+        private int _started;
+        public string Id => "waiting";
+        public bool IsSimulation => true;
+        public int StartedCount => Volatile.Read(ref _started);
+        public IReadOnlyList<ConversionCapability> Capabilities { get; } = [new(SimulationEngine.Png, SimulationEngine.Jpeg)];
+        public TaskCompletionSource BothStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource CancellationObserved { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<ConversionResult> ConvertAsync(ConversionRequest request, IProgress<ConversionProgress> progress,
+            CancellationToken cancellationToken)
+        {
+            progress.Report(new ConversionProgress(20));
+            if (Interlocked.Increment(ref _started) == 2)
+                BothStarted.TrySetResult();
+            using var cancellation = cancellationToken.Register(() => CancellationObserved.TrySetResult());
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return ConversionResult.Simulated();
+        }
+    }
+
     private static string WriteFixture(string directory, string name)
     {
         var path = Path.Combine(directory, name);

@@ -145,6 +145,11 @@ public partial class MainWindowViewModel
 
         await BuildPreviewAsync(token, recheckInputs: true);
         var eligible = _proposals.Where(proposal => proposal.Path is not null).Select(proposal => proposal.Input).ToArray();
+        if (eligible.Length == 0)
+        {
+            _fileNotice = null;
+            return;
+        }
         var (queued, error) = await Task.Run(() =>
         {
             var accepted = new List<InputFile>();
@@ -177,7 +182,7 @@ public partial class MainWindowViewModel
 
         var accepted = queued.ToHashSet();
         _inputs.RemoveAll(accepted.Contains);
-        await BuildPreviewAsync(token);
+        await BuildPreviewAsync(token, recheckInputs: true);
         _fileNotice = error is null ? ("QueueAccepted", [queued.Count], null) : ("QueuePartiallyAccepted", [queued.Count, eligible.Length - queued.Count], error);
         Refresh();
         if (_inputs.Count == 0 && !_stopping)
