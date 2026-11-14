@@ -24,8 +24,6 @@ jobs:
     name: Test and inventory Windows x64 Single-file
     runs-on: windows-2025
     timeout-minutes: 25
-    env:
-      PACKAGE_TEST_ROOT: ${{ runner.temp }}/converter-windows-release-smoke
     outputs:
       version: ${{ steps.source.outputs.version }}
       commit: ${{ steps.source.outputs.commit }}
@@ -58,6 +56,7 @@ jobs:
           }
           "version=$version" >> $env:GITHUB_OUTPUT
           "commit=$commit" >> $env:GITHUB_OUTPUT
+          "PACKAGE_TEST_ROOT=$(Join-Path $env:RUNNER_TEMP 'converter-windows-release-smoke')" >> $env:GITHUB_ENV
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         env:
           DOTNET_INSTALL_DIR: ${{ runner.temp }}/converter-release-dotnet
@@ -120,7 +119,7 @@ jobs:
             artifacts/test-results/*.trx
             artifacts/native-authenticode.csv
             artifacts/publish/authenticode.csv
-            ${{ env.PACKAGE_TEST_ROOT }}/*-data/logs/startup-*.log
+            ${{ runner.temp }}/converter-windows-release-smoke/*-data/logs/startup-*.log
           if-no-files-found: ignore
       - name: Upload unsigned test package
         id: upload
