@@ -52,7 +52,7 @@ public partial class MainWindow : Window
             {
                 Title = viewModel.Text.PickerTitle,
                 AllowMultiple = true,
-                FileTypeFilter = [new FilePickerFileType(viewModel.Text.PickerFilter) { Patterns = ["*.png", "*.jpg", "*.webp"] }]
+                FileTypeFilter = [new FilePickerFileType(viewModel.Text.PickerFilter) { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.webp"] }]
             });
             if (files.Count > 0)
             {

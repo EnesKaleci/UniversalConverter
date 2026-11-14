@@ -27,6 +27,14 @@ public partial class MainWindowViewModel
     public bool CanEditFiles => !_stopping && PreferencesLoaded && !IsPreparing;
     public bool HasFiles => _inputs.Count > 0;
     public bool CanQueueFiles => CanEditFiles && _proposals.Any(proposal => proposal.Path is not null);
+    public bool CanConvertFiles => CanEditFiles && _proposals.Any(proposal =>
+        proposal.Path is not null || proposal.Issue == OutputIssue.Conflict);
+    public bool ShowsQuality => SelectedTarget is { } target && target.Format != ImageFormats.Png;
+    public bool ShowsJpegWarning => (SelectedTarget?.Format == ImageFormats.Jpeg || SelectedTarget?.Format == ImageFormats.JpegLong) &&
+        _inputs.Any(file => file.Format == ImageFormats.Png || file.Format == ImageFormats.WebP);
+
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
+    private int _quality = ImageFormats.DefaultQuality;
     public bool HasCustomFolder => OutputDirectory is not null;
     public string DestinationLabel => OutputDirectory ?? Text.Get("UseSourceFolders");
     public string FileSummary => Text.Format("FileSummary", _inputs.Count, FormatSize(_inputs.Sum(input => (decimal)input.Bytes)));
@@ -44,7 +52,11 @@ public partial class MainWindowViewModel
     partial void OnIsPreparingChanged(bool value) => NotifyFileState();
     partial void OnOutputDirectoryChanged(string? value) => NotifyFileState();
 
-    partial void OnSelectedTargetChanged(TargetOption? value) => _ = RefreshPreviewAsync();
+    partial void OnSelectedTargetChanged(TargetOption? value)
+    {
+        NotifyFileState();
+        _ = RefreshPreviewAsync();
+    }
     partial void OnCollisionIndexChanged(int value) => _ = RefreshPreviewAsync();
 
     public Task AddFilesAsync(IEnumerable<string> files) => RunFileOperationAsync(async token =>
@@ -137,14 +149,23 @@ public partial class MainWindowViewModel
     }
 
     [RelayCommand]
-    private Task QueueSimulationAsync() => RunFileOperationAsync(async token =>
+    private Task QueueSimulationAsync() => QueueFilesAsync(simulation: true);
+
+    [RelayCommand]
+    private Task ConvertImagesAsync() => QueueFilesAsync(simulation: false);
+
+    private Task QueueFilesAsync(bool simulation) => RunFileOperationAsync(async token =>
     {
         var target = SelectedTarget?.Format;
         if (target is null || !HasFiles)
             return;
 
         await BuildPreviewAsync(token, recheckInputs: true);
-        var eligible = _proposals.Where(proposal => proposal.Path is not null).Select(proposal => proposal.Input).ToArray();
+        var eligible = _proposals.Where(proposal => proposal.Path is not null ||
+            !simulation && proposal.Issue == OutputIssue.Conflict).ToArray();
+        var policy = (OutputCollisionPolicy)CollisionIndex;
+        var quality = Quality;
+        var directory = OutputDirectory;
         if (eligible.Length == 0)
         {
             _fileNotice = null;
@@ -154,14 +175,18 @@ public partial class MainWindowViewModel
         {
             var accepted = new List<InputFile>();
             string? errorKey = null;
-            foreach (var input in eligible)
+            foreach (var proposal in eligible)
             {
                 if (token.IsCancellationRequested)
                     break;
                 try
                 {
-                    // Output proposals are metadata. The simulation engine never receives an output path.
-                    _queue.Enqueue(new ConversionRequest(input.Path, target));
+                    var input = proposal.Input;
+                    // Start from the original stem. The engine arbitrates the final name at commit.
+                    var output = simulation ? null : Path.Combine(directory ?? Path.GetDirectoryName(input.Path)!,
+                        OutputNaming.CreateFileName(input.Name, target));
+                    _queue.Enqueue(new ConversionRequest(input.Path, target, output, Simulation: simulation,
+                        CollisionPolicy: simulation ? null : policy, Quality: quality));
                     accepted.Add(input);
                 }
                 catch (Exception exception) when (exception is IOException or ArgumentException or NotSupportedException or InvalidOperationException or UnauthorizedAccessException)
@@ -229,6 +254,9 @@ public partial class MainWindowViewModel
 
         OnPropertyChanged(nameof(CanEditFiles));
         OnPropertyChanged(nameof(CanQueueFiles));
+        OnPropertyChanged(nameof(CanConvertFiles));
+        OnPropertyChanged(nameof(ShowsQuality));
+        OnPropertyChanged(nameof(ShowsJpegWarning));
         OnPropertyChanged(nameof(HasFiles));
         OnPropertyChanged(nameof(HasCustomFolder));
         OnPropertyChanged(nameof(DestinationLabel));

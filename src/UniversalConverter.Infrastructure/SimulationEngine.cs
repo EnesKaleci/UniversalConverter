@@ -5,19 +5,14 @@ namespace UniversalConverter.Infrastructure;
 
 public sealed class SimulationEngine : IConverterEngine
 {
-    public static FileFormat Png { get; } = new("png", FormatCategory.Image);
-    public static FileFormat Jpeg { get; } = new("jpg", FormatCategory.Image);
-    public static FileFormat WebP { get; } = new("webp", FormatCategory.Image);
-    public static IReadOnlyList<FileFormat> Formats { get; } = Array.AsReadOnly(new[] { Png, Jpeg, WebP });
+    public static FileFormat Png => ImageFormats.Png;
+    public static FileFormat Jpeg => ImageFormats.Jpeg;
+    public static FileFormat WebP => ImageFormats.WebP;
+    public static IReadOnlyList<FileFormat> Formats => ImageFormats.All;
 
     public string Id => "simulation";
     public bool IsSimulation => true;
-    public IReadOnlyList<ConversionCapability> Capabilities { get; } = Array.AsReadOnly(new[]
-    {
-        new ConversionCapability(Png, Jpeg), new ConversionCapability(Png, WebP),
-        new ConversionCapability(Jpeg, Png), new ConversionCapability(Jpeg, WebP),
-        new ConversionCapability(WebP, Png), new ConversionCapability(WebP, Jpeg)
-    });
+    public IReadOnlyList<ConversionCapability> Capabilities => ImageFormats.Pairs;
 
     public async Task<ConversionResult> ConvertAsync(
         ConversionRequest request, IProgress<ConversionProgress> progress, CancellationToken cancellationToken)

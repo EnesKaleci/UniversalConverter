@@ -2,7 +2,7 @@ name: Windows trusted distribution
 
 on:
   push:
-    branches: [main, 'codex/m1-s-trusted-distribution', 'codex/m1-2-file-management']
+    branches: [main, 'codex/m1-s-trusted-distribution', 'codex/m1-2-file-management', 'codex/m2-image-conversion']
     tags: ['v*']
 
 permissions:
@@ -59,6 +59,9 @@ jobs:
           if ($env:GITHUB_REF_NAME -eq 'codex/m1-2-file-management') {
             $env:ARTIFACT_NAME = 'UniversalConverter-M1.2-Windows-x64-SingleFile-Unsigned-Development-Test'
           }
+          if ($env:GITHUB_REF_NAME -eq 'codex/m2-image-conversion') {
+            $env:ARTIFACT_NAME = 'UniversalConverter-M2-Windows-x64-SingleFile-Unsigned-Development-Test'
+          }
           "ARTIFACT_NAME=$env:ARTIFACT_NAME" >> $env:GITHUB_ENV
           "package_name=$env:ARTIFACT_NAME" >> $env:GITHUB_OUTPUT
           "version=$version" >> $env:GITHUB_OUTPUT
@@ -103,7 +106,7 @@ jobs:
               $exe.VersionInfo.ProductVersion -cne $env:RELEASE_VERSION) {
             throw 'Packaged EXE metadata does not match the release build.'
           }
-          & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1 -FileManagement
+          & powershell.exe -NoProfile -NonInteractive -File ./.github/scripts/Test-WindowsLocalization.ps1 -FileManagement -ImageConversion
           if ($LASTEXITCODE -ne 0) { throw 'Windows localization smoke test failed.' }
           $zip = "artifacts/$($env:ARTIFACT_NAME).zip"
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash

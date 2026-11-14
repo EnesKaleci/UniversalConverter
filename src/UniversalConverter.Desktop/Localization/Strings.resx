@@ -11,7 +11,7 @@
   <data name="About" xml:space="preserve"><value>About</value></data>
   <data name="SimulationBanner" xml:space="preserve"><value>Simulation mode. Jobs do not create output files.</value></data>
   <data name="DashboardHeading" xml:space="preserve"><value>Try a conversion</value></data>
-  <data name="DashboardIntro" xml:space="preserve"><value>Add PNG, JPG or WebP files to try batch jobs, progress and cancellation.</value></data>
+  <data name="DashboardIntro" xml:space="preserve"><value>Convert PNG, JPEG and WebP images on this device.</value></data>
   <data name="OpenConvert" xml:space="preserve"><value>Open Convert</value></data>
   <data name="DropTitle" xml:space="preserve"><value>Drop image files here</value></data>
   <data name="SupportedImages" xml:space="preserve"><value>PNG, JPG and WebP</value></data>
@@ -43,7 +43,7 @@
   <data name="ThemeSaved" xml:space="preserve"><value>Theme saved.</value></data>
   <data name="ThemeSaveError" xml:space="preserve"><value>Could not save the theme.</value></data>
   <data name="SettingsLoadError" xml:space="preserve"><value>Could not load preferences. Default settings are active.</value></data>
-  <data name="AboutDescription" xml:space="preserve"><value>Offline desktop file conversion. Licensed under GPL-3.0-or-later.</value></data>
+  <data name="AboutDescription" xml:space="preserve"><value>Convert PNG, JPEG and WebP images on this device.</value></data>
   <data name="PlatformLabel" xml:space="preserve"><value>Platform: {0}</value></data>
   <data name="UnknownPlatform" xml:space="preserve"><value>Unknown</value></data>
   <data name="SkippedFiles" xml:space="preserve"><value>{0:N0} unsupported, duplicate or over-limit file(s) skipped.</value></data>
@@ -106,4 +106,27 @@
   <data name="QueueProgress" xml:space="preserve"><value>Overall progress · {0}%</value></data>
   <data name="JobFailedMessage" xml:space="preserve"><value>The simulation could not complete.</value></data>
   <data name="InputMissingCount" xml:space="preserve"><value>{0} file(s) could not be found.</value></data>
+  <data name="ImageBanner" xml:space="preserve"><value>Convert PNG, JPEG and WebP. Simulation runs without creating files.</value></data>
+  <data name="ImageQuality" xml:space="preserve"><value>JPEG / WebP quality</value></data>
+  <data name="JpegWhiteBackground" xml:space="preserve"><value>JPEG has no transparency. Transparent areas become white.</value></data>
+  <data name="ConvertImages" xml:space="preserve"><value>Convert images</value></data>
+  <data name="ImageHistory" xml:space="preserve"><value>Image conversions</value></data>
+  <data name="SimulationHistory" xml:space="preserve"><value>Simulations in this session</value></data>
+  <data name="SimulationMode" xml:space="preserve"><value>Simulation</value></data>
+  <data name="ImageMode" xml:space="preserve"><value>Image conversion</value></data>
+  <data name="ImageCompleted" xml:space="preserve"><value>Image converted</value></data>
+  <data name="ImageSkipped" xml:space="preserve"><value>Skipped · Output name in use</value></data>
+  <data name="QueueSettled" xml:space="preserve"><value>Jobs finished · {0}/{1}</value></data>
+  <data name="HistoryTiming" xml:space="preserve"><value>{0:g} · {1:0.00} seconds</value></data>
+  <data name="OpenLocation" xml:space="preserve"><value>Open file location</value></data>
+  <data name="OpenLocationError" xml:space="preserve"><value>The output folder could not be opened. The file may have moved.</value></data>
+  <data name="HistoryLoadError" xml:space="preserve"><value>Saved image history could not be loaded.</value></data>
+  <data name="ImageErrorInvalidImage" xml:space="preserve"><value>The image is empty, damaged or unreadable.</value></data>
+  <data name="ImageErrorFormatMismatch" xml:space="preserve"><value>The image format does not match the extension or the selected target.</value></data>
+  <data name="ImageErrorAnimatedImage" xml:space="preserve"><value>Animated images are unsupported.</value></data>
+  <data name="ImageErrorImageTooLarge" xml:space="preserve"><value>The image exceeds the size or pixel limit.</value></data>
+  <data name="ImageErrorSourceAccess" xml:space="preserve"><value>The source file could not be opened.</value></data>
+  <data name="ImageErrorOutputAccess" xml:space="preserve"><value>The destination could not be written. Check the location and permissions.</value></data>
+  <data name="ImageErrorEncoding" xml:space="preserve"><value>The image could not be encoded or verified.</value></data>
+  <data name="ImageErrorDiskFull" xml:space="preserve"><value>The destination ran out of disk space.</value></data>
 </root>

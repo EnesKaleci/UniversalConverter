@@ -11,6 +11,7 @@ public sealed class ConversionQueueService : IAsyncDisposable
         public ConversionJob Job { get; set; } = job;
         public ConversionPlan Plan { get; } = plan;
         public CancellationTokenSource Cancellation { get; } = new();
+        public bool Committing { get; set; }
         public Task? CancellationCallbacks { get; set; }
         public TaskCompletionSource<ConversionJob> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
@@ -27,14 +28,20 @@ public sealed class ConversionQueueService : IAsyncDisposable
     private readonly Task _workers;
     private readonly int _historyCapacity;
     private bool _stopping;
+    private readonly IConversionHistory? _history;
+    private readonly Action<Exception>? _historyError;
+    private Task _historyWrites = Task.CompletedTask;
 
-    public ConversionQueueService(ConversionCoordinator coordinator, int concurrency = 2, int capacity = 128, int historyCapacity = 256)
+    public ConversionQueueService(ConversionCoordinator coordinator, int concurrency = 2, int capacity = 128, int historyCapacity = 256,
+        IConversionHistory? history = null, Action<Exception>? historyError = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(concurrency);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(capacity);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(historyCapacity);
         _coordinator = coordinator;
         _historyCapacity = historyCapacity;
+        _history = history;
+        _historyError = historyError;
         _pending = Channel.CreateBounded<Entry>(new BoundedChannelOptions(capacity) { FullMode = BoundedChannelFullMode.Wait });
         _workers = Task.WhenAll(Enumerable.Range(0, concurrency).Select(_ => Task.Run(WorkerAsync)));
     }
@@ -71,13 +78,16 @@ public sealed class ConversionQueueService : IAsyncDisposable
 
     private bool RequestCancellation(Entry entry)
     {
-        if (entry.Job.IsTerminal || entry.CancellationCallbacks is not null)
+        if (entry.Job.IsTerminal || entry.Committing || entry.CancellationCallbacks is not null)
             return false;
 
         if (entry.Job.Status == ConversionStatus.Queued)
             Finish(entry, entry.Job.Cancel());
         else
+        {
+            entry.Job = entry.Job.StopAcceptingCancellation();
             entry.CancellationCallbacks = entry.Cancellation.CancelAsync();
+        }
         return true;
     }
 
@@ -107,11 +117,17 @@ public sealed class ConversionQueueService : IAsyncDisposable
                             entry.Job = entry.Job.Report(value);
                     }
                 });
-                result = await _coordinator.ExecuteAsync(entry.Plan, progress, entry.Cancellation.Token).ConfigureAwait(false);
+                result = await _coordinator.ExecuteAsync(entry.Plan, progress, entry.Cancellation.Token, () => BeginCommit(entry)).ConfigureAwait(false);
             }
             catch (Exception exception)
             {
-                error = exception is IOException or NotSupportedException ? exception.Message : "The conversion engine failed.";
+                error = exception switch
+                {
+                    ConversionException failure => failure.Reason.ToString(),
+                    _ when entry.Plan.Engine is IOutputCommitEngine => ConversionFailure.Encoding.ToString(),
+                    IOException or NotSupportedException => exception.Message,
+                    _ => "The conversion engine failed."
+                };
             }
 
             Task? callbacks;
@@ -139,9 +155,32 @@ public sealed class ConversionQueueService : IAsyncDisposable
         }
     }
 
+    private void BeginCommit(Entry entry)
+    {
+        lock (_gate)
+        {
+            entry.Cancellation.Token.ThrowIfCancellationRequested();
+            entry.Committing = true;
+            entry.Job = entry.Job.StopAcceptingCancellation();
+        }
+    }
+
     private void Finish(Entry entry, ConversionJob terminal)
     {
         entry.Job = terminal;
+        if (_history is not null && !entry.Plan.Engine.IsSimulation)
+        {
+            var finished = terminal.FinishedAt!.Value;
+            var record = new ConversionHistoryEntry(terminal.Id, terminal.Request.InputPath, terminal.Request.Target.Extension,
+                terminal.Result?.OutputPath, terminal.Status, terminal.Error, finished, finished - (terminal.StartedAt ?? finished));
+            var previous = _historyWrites;
+            _historyWrites = Task.Run(async () =>
+            {
+                await previous.ConfigureAwait(false);
+                try { await _history.StoreAsync(record).ConfigureAwait(false); }
+                catch (Exception error) { _historyError?.Invoke(error); }
+            });
+        }
         entry.Completion.TrySetResult(terminal);
         var expired = _jobs.Values.Reverse().Where(item => item.Job.IsTerminal).Skip(_historyCapacity).ToArray();
         foreach (var item in expired)
@@ -161,5 +200,6 @@ public sealed class ConversionQueueService : IAsyncDisposable
             }
         }
         await _workers.ConfigureAwait(false);
+        await _historyWrites.ConfigureAwait(false);
     }
 }

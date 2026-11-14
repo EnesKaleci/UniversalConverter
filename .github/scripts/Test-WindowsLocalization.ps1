@@ -1,4 +1,4 @@
-﻿param([switch]$FileManagement)
+﻿param([switch]$FileManagement, [switch]$ImageConversion)
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
@@ -262,13 +262,47 @@ function Test-TurkishFile {
     if ((Get-ChildItem -LiteralPath $folder -File).Count -ne $expectedSourceCount) { throw 'Simulation created an output file.' }
     Write-Host 'Unicode file picker, queue and history passed.'
     if ($FileManagement) { Write-Host 'M1.2 multi-file picker, output preview and multiple removal passed.' }
+    if ($ImageConversion) {
+        $originalHash = (Get-FileHash -LiteralPath $file).Hash
+        Set-Selection $Window 'NavConvert'
+        $null = Wait-ForResult { Get-UiElement $Window 'ChooseFiles' } 'real conversion file picker'
+        (Get-UiElement $Window 'ChooseFiles').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        $dialog = Wait-ForResult {
+            [ConverterTestWindows]::VisibleWindows($Process.Id) |
+                Where-Object { $_ -ne $MainHandle -and [ConverterTestWindows]::Title($_) -ceq 'Görselleri seç' } |
+                Select-Object -First 1
+        } 'image dialog'
+        $edit = Wait-ForResult {
+            $control = [ConverterTestWindows]::FileNameEdit($dialog)
+            if ($control -ne [IntPtr]::Zero) { $control }
+        } 'native filename edit'
+        if (-not [ConverterTestWindows]::SetFileName($edit, $file) -or
+            -not [ConverterTestWindows]::OpenSelectedFile($dialog)) { throw 'Could not select the real image.' }
+        $button = Wait-ForResult {
+            $item = Get-UiElement $Window 'ConvertImages'
+            if ($item -and $item.Current.IsEnabled) { $item }
+        } 'real image conversion button'
+        $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        Assert-UiName $Window 'PageTitle' 'Kuyruk'
+        Set-Selection $Window 'NavHistory'
+        $script:convertedImage = [IO.Path]::ChangeExtension($file, '.jpg')
+        $null = Wait-ForResult { Get-VisibleUiText $Window $script:convertedImage } 'real output path in History'
+        Add-Type -AssemblyName System.Drawing
+        $decoded = [Drawing.Image]::FromFile($script:convertedImage)
+        try {
+            if ($decoded.RawFormat.Guid -ne [Drawing.Imaging.ImageFormat]::Jpeg.Guid -or
+                $decoded.Width -ne 1 -or $decoded.Height -ne 1) { throw 'The produced file is not a 1x1 JPEG.' }
+        } finally { $decoded.Dispose() }
+        if ((Get-FileHash -LiteralPath $file).Hash -ne $originalHash) { throw 'Conversion changed the source.' }
+        Write-Host 'M2 extracted EXE created a valid 1x1 JPEG and preserved the Unicode PNG source.'
+    }
 }
 
 # Seed the other language regardless of the runner account's display language.
 $english = @('Dashboard', 'Convert', 'Queue', 'History', 'Settings', 'About')
 $turkish = @('Genel Bakış', 'Dönüştür', 'Kuyruk', 'Geçmiş', 'Ayarlar', 'Hakkında')
-$englishBanner = 'Simulation mode. Jobs do not create output files.'
-$turkishBanner = 'Simülasyon modu. İşlemler çıktı dosyası oluşturmaz.'
+$englishBanner = 'Convert PNG, JPEG and WebP. Simulation runs without creating files.'
+$turkishBanner = 'PNG, JPEG ve WebP görsellerini dönüştür. Simülasyon dosya oluşturmadan çalışır.'
 
 $process = [Diagnostics.Process]::Start($exe, '')
 try {
@@ -298,6 +332,11 @@ try {
     $window = Wait-ForResult { Get-MainWindow $process } 'reopened window'
     Assert-UiName $window 'PageTitle' 'Genel Bakış'
     Assert-UiName $window 'SimulationBanner' $turkishBanner
+    if ($ImageConversion) {
+        Set-Selection $window 'NavHistory'
+        $null = Wait-ForResult { Get-VisibleUiText $window $script:convertedImage } 'SQLite conversion history after restart'
+        Write-Host 'M2 real conversion history survived restart.'
+    }
     Stop-Cleanly $process
 } finally {
     if (-not $process.HasExited) { $process.Kill() }
